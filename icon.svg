@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#4f46e5"/>
+  <g transform="translate(256,256)">
+    <!-- DNA double helix -->
+    <g stroke="none" fill="none">
+      <path d="M -70 -120 Q 0 -60 70 -120 Q 0 -60 -70 0 Q 0 60 70 0 Q 0 60 -70 120" 
+            stroke="#a5b4fc" stroke-width="8" fill="none" stroke-linecap="round"/>
+      <path d="M 70 -120 Q 0 -60 -70 -120 Q 0 -60 70 0 Q 0 60 -70 0 Q 0 60 70 120" 
+            stroke="#c7d2fe" stroke-width="8" fill="none" stroke-linecap="round"/>
+      <!-- rungs -->
+      <line x1="-55" y1="-100" x2="55" y2="-100" stroke="#818cf8" stroke-width="5" stroke-linecap="round"/>
+      <line x1="-35" y1="-50" x2="35" y2="-50" stroke="#818cf8" stroke-width="5" stroke-linecap="round"/>
+      <line x1="-55" y1="0" x2="55" y2="0" stroke="#818cf8" stroke-width="5" stroke-linecap="round"/>
+      <line x1="-35" y1="50" x2="35" y2="50" stroke="#818cf8" stroke-width="5" stroke-linecap="round"/>
+      <line x1="-55" y1="100" x2="55" y2="100" stroke="#818cf8" stroke-width="5" stroke-linecap="round"/>
+    </g>
+    <!-- ESAT text -->
+    <text x="0" y="175" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#a5b4fc">ESAT</text>
+  </g>
+</svg>
