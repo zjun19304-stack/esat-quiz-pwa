@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="description" content="ESAT exam practice platform with offline support">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ESAT">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <!-- Security Headers -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none';">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-DNS-Prefetch-Control" content="off">
+  <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), interest-cohort=()">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <title>ESAT Practice</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Login Screen -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-card">
+      <div class="login-icon">&#x1F9EC;</div>
+      <h1 class="login-title">ESAT Practice</h1>
+      <p class="login-subtitle">Enter your access password</p>
+      <input type="password" id="login-password" class="login-input" placeholder="Password" autocomplete="off" spellcheck="false">
+      <p class="login-error" id="login-error"></p>
+      <button class="login-btn" id="login-btn">Enter</button>
+      <p class="login-hint">Password provided by your teacher</p>
+    </div>
+  </div>
+
+  <div id="app" style="display:none;">
+
+    <!-- Home View -->
+    <section id="view-home" class="view active">
+      <header class="app-header">
+        <div class="header-row">
+          <div>
+            <h1>ESAT Practice</h1>
+            <p class="subtitle">ESAT Exam Training</p>
+          </div>
+          <button class="logout-btn" id="btn-logout" title="Logout">Logout</button>
+        </div>
+      </header>
+
+      <div class="stats-bar">
+        <div class="stat-item">
+          <span class="stat-num" id="stat-total">0</span>
+          <span class="stat-label">Practiced</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-num" id="stat-accuracy">0%</span>
+          <span class="stat-label">Accuracy</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-num" id="stat-wrong">0</span>
+          <span class="stat-label">Wrong Bank</span>
+        </div>
+      </div>
+
+      <div class="export-row">
+        <button class="btn-export" id="btn-export-data" title="Export your practice data to share with teacher">Export My Data</button>
+      </div>
+
+      <div class="section-title">
+        <h2>Select Topics</h2>
+        <button class="select-all-btn" id="btn-select-all">Select All</button>
+      </div>
+
+      <div class="topic-grid" id="topic-grid"></div>
+
+      <div class="section-title">
+        <h2>Number of Questions</h2>
+      </div>
+      <div class="count-options" id="count-options">
+        <button class="count-btn" data-count="10">10</button>
+        <button class="count-btn active" data-count="20">20</button>
+        <button class="count-btn" data-count="30">30</button>
+        <button class="count-btn" data-count="50">50</button>
+      </div>
+
+      <div class="section-title">
+        <h2>Options</h2>
+      </div>
+      <div class="extra-options">
+        <label class="toggle-label">
+          <input type="checkbox" id="toggle-timer">
+          <span class="toggle-slider"></span>
+          <span class="toggle-text">Timer mode (60s per question)</span>
+        </label>
+      </div>
+
+      <div class="bottom-actions">
+        <button class="btn-primary btn-large" id="btn-start">Start Practice</button>
+        <button class="btn-secondary btn-large" id="btn-wrong-book">Wrong Bank</button>
+      </div>
+    </section>
+
+    <!-- Practice View -->
+    <section id="view-practice" class="view">
+      <header class="practice-header">
+        <button class="back-btn" id="practice-back">&#8592;</button>
+        <div class="progress-info">
+          <span id="progress-text">Q 1/20</span>
+          <span class="timer" id="timer-display" style="display:none;">60s</span>
+        </div>
+      </header>
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="progress-fill" style="width:5%"></div>
+      </div>
+
+      <div class="question-card" id="question-card">
+        <div class="question-meta">
+          <span class="topic-tag" id="q-topic-tag">Ecology</span>
+          <span class="type-tag" id="q-type-tag">Single</span>
+        </div>
+        <div class="question-stem" id="q-stem"></div>
+        <div class="question-image-wrap hidden" id="q-image-wrap">
+          <img class="question-image" id="q-image" src="" alt="">
+        </div>
+        <div class="options-list" id="q-options"></div>
+        <div class="explanation-box" id="explanation-box" style="display:none;">
+          <div class="explanation-header" id="exp-header">
+            <span id="exp-icon"></span>
+            <span id="exp-title"></span>
+          </div>
+          <div class="explanation-correct" id="exp-correct"></div>
+          <div class="explanation-text" id="exp-text"></div>
+          <div class="explanation-source" id="exp-source"></div>
+        </div>
+      </div>
+
+      <div class="practice-actions">
+        <button class="btn-primary btn-large" id="btn-confirm" disabled>Confirm Answer</button>
+        <button class="btn-primary btn-large hidden" id="btn-next">Next</button>
+      </div>
+    </section>
+
+    <!-- Result View -->
+    <section id="view-result" class="view">
+      <header class="app-header">
+        <h1>Practice Results</h1>
+      </header>
+
+      <div class="result-hero">
+        <div class="result-ring-container">
+          <svg class="result-ring" viewBox="0 0 200 200">
+            <circle class="ring-bg" cx="100" cy="100" r="85" fill="none" stroke-width="14"/>
+            <circle class="ring-fill" id="ring-fill" cx="100" cy="100" r="85" fill="none" stroke-width="14"
+                    stroke-dasharray="534" stroke-dashoffset="534"
+                    transform="rotate(-90 100 100)"/>
+          </svg>
+          <div class="result-center">
+            <span class="result-percent" id="result-percent">0%</span>
+            <span class="result-score" id="result-score">0/0</span>
+          </div>
+        </div>
+        <p class="result-comment" id="result-comment"></p>
+      </div>
+
+      <div class="result-summary">
+        <div class="summary-item">
+          <span class="summary-icon correct-icon">&#10003;</span>
+          <span id="summary-correct">0 correct</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-icon wrong-icon">&#10007;</span>
+          <span id="summary-wrong">0 wrong</span>
+        </div>
+        <div class="summary-item" id="summary-time-wrap" style="display:none;">
+          <span class="summary-icon time-icon">&#9201;</span>
+          <span id="summary-time"></span>
+        </div>
+      </div>
+
+      <div class="section-title">
+        <h2>Review</h2>
+      </div>
+      <div class="review-list" id="review-list"></div>
+
+      <div class="bottom-actions">
+        <button class="btn-primary btn-large" id="btn-retry-wrong">Retry Wrong</button>
+        <button class="btn-secondary btn-large" id="btn-back-home">Back Home</button>
+      </div>
+    </section>
+
+    <!-- Wrong Bank View -->
+    <section id="view-wrong" class="view">
+      <header class="app-header">
+        <h1>Wrong Bank</h1>
+        <button class="back-btn header-back" id="wrong-back">&#8592;</button>
+      </header>
+
+      <div class="wrong-filter-bar" id="wrong-filter-bar">
+        <button class="filter-chip active" data-filter="all">All</button>
+      </div>
+
+      <div class="wrong-list" id="wrong-list"></div>
+
+      <div class="empty-state hidden" id="wrong-empty">
+        <div class="empty-icon">&#127881;</div>
+        <p>Wrong bank is empty, keep it up!</p>
+      </div>
+
+      <div class="bottom-actions" id="wrong-actions" style="display:none;">
+        <button class="btn-primary btn-large" id="btn-practice-wrong">Practice All Wrong</button>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Install Banner -->
+  <div class="install-banner hidden" id="install-banner">
+    <div class="install-content">
+      <span>&#128241; Add to home screen for offline practice</span>
+    </div>
+    <button class="btn-primary btn-small" id="btn-install">Install</button>
+    <button class="btn-text" id="btn-dismiss">&#10005;</button>
+  </div>
+
+  <script src="questions.enc.js"></script>
+  <script src="auth.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
