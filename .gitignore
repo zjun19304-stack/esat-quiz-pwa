@@ -1,0 +1,7 @@
+.DS_Store
+Thumbs.db
+node_modules/
+*.log
+
+# Original question bank file - DO NOT upload to GitHub!
+questions.js
