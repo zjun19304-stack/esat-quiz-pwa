@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="theme-color" content="#1e1b4b">
+  <title>ESAT Admin</title>
+  <style>
+    :root {
+      --bg: #0f0f1a;
+      --bg-card: #1a1a2e;
+      --bg-card-hover: #22223a;
+      --accent: #818cf8;
+      --accent-glow: rgba(129,140,248,0.3);
+      --correct: #4ade80;
+      --correct-bg: rgba(74,222,128,0.15);
+      --wrong: #f87171;
+      --wrong-bg: rgba(248,113,113,0.15);
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+      --text-muted: #64748b;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    #login-overlay {
+      position: fixed; inset:0; background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999;
+    }
+    #login-overlay.hidden { display:none; }
+    .login-card {
+      background: var(--bg-card);
+      padding: 40px;
+      border-radius: var(--radius);
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      width: 360px;
+    }
+    .login-card h1 { font-size: 22px; margin-bottom: 6px; }
+    .login-card p { color: var(--text-dim); font-size: 13px; margin-bottom: 20px; }
+    .login-card input {
+      width: 100%; padding: 12px 16px;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.05);
+      color: var(--text); font-size: 16px;
+      text-align: center; outline: none;
+      margin-bottom: 12px;
+    }
+    .login-card input:focus { border-color: var(--accent); }
+    .login-btn {
+      width: 100%; padding: 12px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: var(--radius-sm);
+      font-size: 16px; font-weight: 600;
+      cursor: pointer; transition: transform 0.15s;
+    }
+    .login-btn:hover { transform: translateY(-1px); }
+    .login-btn:active { transform: translateY(0); }
+    .login-error { color: var(--wrong); font-size: 13px; min-height: 20px; }
+
+    #app { display:none; max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+    #app.active { display:block; }
+
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    header h1 { font-size: 24px; }
+    .header-actions { display:flex; gap:10px; flex-wrap:wrap; }
+    .btn {
+      padding: 8px 18px; border: none; border-radius: var(--radius-sm);
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-accent { background: var(--accent); color: #fff; }
+    .btn-accent:hover { box-shadow: 0 4px 16px var(--accent-glow); }
+    .btn-ghost {
+      background: transparent; color: var(--text-dim);
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .btn-ghost:hover { border-color: rgba(255,255,255,0.3); color: var(--text); }
+    .btn-pdf {
+      background: linear-gradient(135deg, #f43f5e, #e11d48);
+      color: #fff;
+    }
+    .btn-wrong-pdf {
+      background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      color: #fff;
+    }
+    .btn-practice-pdf {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #fff;
+    }
+
+    #wrong-export {
+      display: none;
+      background: #fff;
+      color: #000;
+      padding: 40px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    #wrong-export.active { display: block; }
+    .we-student-title {
+      font-size: 20px; font-weight: 700;
+      border-bottom: 2px solid #333;
+      padding-bottom: 8px; margin: 24px 0 16px;
+    }
+    .we-student-title:first-child { margin-top: 0; }
+    .we-question {
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #eee;
+      page-break-inside: avoid;
+    }
+    .we-q-meta { color: #666; font-size: 12px; margin-bottom: 6px; }
+    .we-stem { font-weight: 600; margin-bottom: 8px; }
+    .we-options { margin: 8px 0 8px 20px; }
+    .we-option { margin: 2px 0; padding: 2px 0; }
+    .we-option.correct { background: #dcfce7; font-weight: 600; }
+    .we-answer-row {
+      display: flex; gap: 24px; margin: 8px 0;
+      font-size: 13px;
+    }
+    .we-answer-row .wrong-ans { color: #dc2626; font-weight: 600; }
+    .we-answer-row .right-ans { color: #16a34a; font-weight: 600; }
+    .we-explain {
+      background: #f8f9fa;
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin-top: 8px;
+      font-size: 12px;
+      color: #333;
+      white-space: pre-wrap;
+    }
+    .we-q-image {
+      max-width: 100%;
+      max-height: 200px;
+      margin: 8px 0;
+      break-inside: avoid;
+    }
+    .we-empty { text-align: center; color: #999; padding: 40px; }
+    .we-cover {
+      text-align: center; padding: 60px 20px;
+      border-bottom: 2px solid #333; margin-bottom: 30px;
+    }
+    .we-cover h2 { font-size: 26px; margin-bottom: 8px; }
+    .we-cover p { color: #666; font-size: 13px; }
+
+    #practice-export {
+      display: none;
+      background: #fff;
+      color: #000;
+      padding: 40px;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+    #practice-export.active { display: block; }
+    .pe-cover {
+      text-align: center; padding: 60px 20px;
+      border-bottom: 2px solid #333; margin-bottom: 30px;
+    }
+    .pe-cover h2 { font-size: 26px; margin-bottom: 8px; }
+    .pe-cover p { color: #666; font-size: 13px; }
+    .pe-student-title {
+      font-size: 20px; font-weight: 700;
+      border-bottom: 2px solid #333;
+      padding-bottom: 8px; margin: 24px 0 16px;
+    }
+    .pe-student-title:first-child { margin-top: 0; }
+    .pe-question {
+      margin-bottom: 32px;
+      padding-bottom: 20px;
+      border-bottom: 1px dashed #ccc;
+      page-break-inside: avoid;
+    }
+    .pe-q-num { font-weight: 700; font-size: 15px; margin-bottom: 6px; color: #333; }
+    .pe-stem { font-weight: 600; margin-bottom: 10px; font-size: 14px; }
+    .pe-options { margin: 0 0 10px 24px; }
+    .pe-option { margin: 4px 0; padding: 4px 0; font-size: 14px; }
+    .pe-blank-line {
+      margin: 12px 0;
+      color: #999;
+      font-size: 12px;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 30px;
+    }
+    .pe-q-image {
+      max-width: 100%;
+      max-height: 200px;
+      margin: 8px 0;
+    }
+    .pe-empty { text-align: center; color: #999; padding: 40px; }
+
+    @media print {
+      #login-overlay, #app, #detail-overlay, header, .btn { display: none !important; }
+      body { background: #fff; color: #000; }
+      .printing-wrong #wrong-export { display: block !important; position: static; }
+      .printing-wrong #practice-export { display: none !important; }
+      .printing-practice #practice-export { display: block !important; position: static; }
+      .printing-practice #wrong-export { display: none !important; }
+      .we-question { page-break-inside: avoid; }
+      .we-student-title { page-break-after: avoid; }
+      .pe-question { page-break-inside: avoid; }
+      .pe-student-title { page-break-after: avoid; }
+    }
+
+    .import-zone {
+      border: 2px dashed rgba(255,255,255,0.15);
+      border-radius: var(--radius);
+      padding: 36px;
+      text-align: center;
+      margin-bottom: 24px;
+      transition: border-color 0.2s, background 0.2s;
+      cursor: pointer;
+    }
+    .import-zone:hover, .import-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-glow);
+    }
+    .import-zone .icon { font-size: 40px; margin-bottom: 8px; }
+    .import-zone p { color: var(--text-dim); font-size: 14px; margin: 4px 0; }
+    .import-zone .hint { color: var(--text-muted); font-size: 12px; }
+    .import-zone .file-list {
+      margin-top: 14px; text-align: left;
+      display: flex; flex-wrap: wrap; gap: 6px;
+      justify-content: center;
+    }
+    .file-chip {
+      background: var(--bg-card-hover);
+      padding: 4px 14px; border-radius: 20px;
+      font-size: 13px; color: var(--accent);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      padding: 20px;
+      text-align: center;
+    }
+    .stat-card .num {
+      font-size: 32px; font-weight: 700;
+      color: var(--accent);
+    }
+    .stat-card .label {
+      font-size: 13px; color: var(--text-dim);
+      margin-top: 4px;
+    }
+    .stat-card.correct .num { color: var(--correct); }
+    .stat-card.wrong .num { color: var(--wrong); }
+
+    .section-title {
+      font-size: 18px; font-weight: 700;
+      margin: 24px 0 14px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-title::before {
+      content: ''; display: block;
+      width: 4px; height: 20px;
+      border-radius: 2px; background: var(--accent);
+    }
+
+    .student-table {
+      width: 100%; border-collapse: collapse;
+      background: var(--bg-card); border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .student-table th, .student-table td {
+      padding: 12px 16px; text-align: left;
+      font-size: 14px;
+    }
+    .student-table th {
+      background: rgba(255,255,255,0.04);
+      color: var(--text-dim); font-weight: 600;
+      font-size: 13px; text-transform: uppercase;
+    }
+    .student-table tr { border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .student-table tr:hover { background: var(--bg-card-hover); }
+    .student-table .name {
+      font-weight: 600; color: var(--accent);
+      cursor: pointer;
+    }
+    .student-table .name:hover { text-decoration: underline; }
+    .accuracy.high { color: var(--correct); }
+    .accuracy.mid { color: #fbbf24; }
+    .accuracy.low { color: var(--wrong); }
+
+    #detail-overlay {
+      position: fixed; inset:0; background: rgba(0,0,0,0.7);
+      display:flex; align-items: center; justify-content: center;
+      z-index: 10000;
+    }
+    #detail-overlay.hidden { display:none; }
+    .detail-card {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      padding: 28px; width: 90%; max-width: 700px; max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+    }
+    .detail-close {
+      float:right; background: none; border: none; color: var(--text-dim);
+      font-size: 22px; cursor: pointer;
+    }
+    .detail-close:hover { color: var(--wrong); }
+    .detail-name { font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+    .detail-meta {
+      display: flex; gap: 20px; flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .detail-meta-item {
+      background: rgba(255,255,255,0.04);
+      padding: 10px 16px; border-radius: var(--radius-sm);
+    }
+    .detail-meta-item .v { font-size: 18px; font-weight: 700; color: var(--accent); }
+    .detail-meta-item .l { font-size: 12px; color: var(--text-muted); }
+    .detail-section { margin-bottom: 16px; }
+    .detail-section h3 {
+      font-size: 15px; font-weight: 600;
+      margin-bottom: 10px; color: var(--text-dim);
+    }
+    .wrong-item {
+      background: var(--wrong-bg);
+      padding: 10px 14px; border-radius: var(--radius-sm);
+      margin-bottom: 8px; font-size: 13px;
+      border-left: 3px solid var(--wrong);
+    }
+    .wrong-item .q-stem { font-weight: 600; margin-bottom: 4px; }
+    .wrong-item .q-meta { color: var(--text-muted); font-size: 12px; }
+    .history-item {
+      background: var(--bg-card-hover);
+      padding: 8px 14px; border-radius: var(--radius-sm);
+      margin-bottom: 6px; font-size: 13px;
+      display: flex; justify-content: space-between;
+    }
+    .history-item .acc {
+      font-weight: 600;
+      padding: 1px 8px; border-radius: 10px;
+    }
+    .acc.good { background: var(--correct-bg); color: var(--correct); }
+    .acc.ok { background: rgba(251,191,36,0.15); color: #fbbf24; }
+    .acc.bad { background: var(--wrong-bg); color: var(--wrong); }
+
+    .topic-bar-wrap {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 6px;
+    }
+    .topic-bar-label {
+      width: 100px; font-size: 13px; font-weight: 600;
+      text-align: right; flex-shrink: 0;
+    }
+    .topic-bar-track {
+      flex:1; height: 20px; background: rgba(255,255,255,0.06);
+      border-radius: 10px; overflow: hidden;
+      display: flex;
+    }
+    .topic-bar-correct {
+      height: 100%; background: var(--correct);
+      border-radius: 10px 0 0 10px;
+    }
+    .topic-bar-wrong {
+      height: 100%; background: var(--wrong);
+      border-radius: 0 10px 10px 0;
+    }
+    .topic-bar-stat {
+      width: 60px; font-size: 12px; color: var(--text-dim); text-align: left;
+      flex-shrink: 0;
+    }
+
+    .heatmap { margin-bottom: 24px; }
+    .heatmap table { width: 100%; border-collapse: collapse; }
+    .heatmap th, .heatmap td {
+      padding: 8px 12px; text-align: center; font-size: 13px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .heatmap th { background: rgba(255,255,255,0.04); color: var(--text-dim); }
+    .heatbar {
+      height: 6px; border-radius: 3px;
+      background: var(--wrong);
+      min-width: 2px; display: inline-block;
+    }
+
+    @media print {
+      body { background: #fff; color: #000; }
+      header, .import-zone, .btn, .header-actions, #detail-overlay, .section-title::before {
+        display: none !important;
+      }
+      .student-table { background: #fff; border: 1px solid #ddd; }
+      .student-table th { background: #f5f5f5; color: #333; }
+      .student-table td { color: #333; }
+      .student-table tr { border-bottom: 1px solid #ddd; }
+      .student-table .name { color: #333; }
+      .stats-grid { page-break-inside: avoid; }
+      .stat-card { background: #f8f9fa; border: 1px solid #ddd; }
+      .stat-card .num { color: #6366f1; }
+      .stat-card.correct .num { color: #16a34a; }
+      .stat-card.wrong .num { color: #dc2626; }
+      .section-title { color: #333; }
+      .topic-bar-correct { background: #16a34a; }
+      .topic-bar-wrong { background: #dc2626; }
+      .topic-bar-track { background: #f0f0f0; }
+      .heatbar { background: #dc2626; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="login-overlay">
+  <div class="login-card">
+    <h1>&#x1F9EC; ESAT Admin</h1>
+    <p>Enter admin password</p>
+    <input type="password" id="admin-password" placeholder="Admin password" autocomplete="off">
+    <p class="login-error" id="admin-error"></p>
+    <button class="login-btn" id="admin-login-btn">Enter</button>
+    <p style="font-size:12px;color:var(--text-muted);margin-top:12px;">
+      Ask students to export their data from the app<br>and send you the JSON file
+    </p>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <h1>&#x1F4CA; Student Practice Records</h1>
+    <div class="header-actions">
+      <button class="btn btn-ghost" id="btn-clear-data">Clear Data</button>
+      <button class="btn btn-practice-pdf" id="btn-export-practice-pdf">Practice PDF</button>
+      <button class="btn btn-wrong-pdf" id="btn-export-wrong-pdf">Wrong PDF (with answers)</button>
+      <button class="btn btn-pdf" id="btn-export-pdf">Stats PDF</button>
+    </div>
+  </header>
+
+  <div class="import-zone" id="import-zone">
+    <div class="icon">&#x1F4C2;</div>
+    <p><strong>Drag or click to import student data files</strong></p>
+    <p class="hint">Supports multiple .json files (exported from the student app)</p>
+    <input type="file" id="file-input" multiple accept=".json" style="display:none;">
+    <div class="file-list" id="file-list"></div>
+  </div>
+
+  <div class="stats-grid" id="overview-stats">
+    <div class="stat-card">
+      <div class="num" id="ov-students">0</div>
+      <div class="label">Students</div>
+    </div>
+    <div class="stat-card">
+      <div class="num" id="ov-total">0</div>
+      <div class="label">Total Questions</div>
+    </div>
+    <div class="stat-card correct">
+      <div class="num" id="ov-accuracy">0%</div>
+      <div class="label">Accuracy</div>
+    </div>
+    <div class="stat-card wrong">
+      <div class="num" id="ov-wrongs">0</div>
+      <div class="label">Total Wrongs</div>
+    </div>
+  </div>
+
+  <div class="section-title">Student List</div>
+  <div style="overflow-x:auto;">
+    <table class="student-table">
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Questions</th>
+          <th>Accuracy</th>
+          <th>Wrongs</th>
+          <th>Sessions</th>
+          <th>Last Export</th>
+        </tr>
+      </thead>
+      <tbody id="student-tbody"></tbody>
+    </table>
+  </div>
+  <p id="no-data-msg" style="text-align:center;color:var(--text-muted);padding:40px;">
+    No student data imported yet<br>
+    <span style="font-size:13px;">Ask students to export their data from the app and drag the files here</span>
+  </p>
+
+  <div class="section-title">Topic Accuracy Distribution</div>
+  <div id="topic-breakdown" style="background:var(--bg-card);border-radius:var(--radius);padding:20px;"></div>
+
+  <div class="section-title">Wrong Distribution by Topic (Cross-Student)</div>
+  <div class="heatmap" style="overflow-x:auto;">
+    <table>
+      <thead id="heatmap-head"></thead>
+      <tbody id="heatmap-body"></tbody>
+    </table>
+  </div>
+  <p id="heatmap-msg" style="text-align:center;color:var(--text-muted);">Import student data to see comparison</p>
+</div>
+
+<div id="detail-overlay" class="hidden">
+  <div class="detail-card" id="detail-content"></div>
+</div>
+
+<script>
+'use strict';
+
+const ADMIN_PASSWORD = 'esat_admin_2026';
+
+const AdminAuth = {
+  login(password) {
+    return password === ADMIN_PASSWORD;
+  }
+};
+
+const AdminStore = {
+  _key: 'esat_admin_students',
+  students: [],
+  init() {
+    try {
+      const raw = sessionStorage.getItem(this._key);
+      this.students = raw ? JSON.parse(raw) : [];
+    } catch { this.students = []; }
+  },
+  save() {
+    sessionStorage.setItem(this._key, JSON.stringify(this.students));
+  },
+  add(data) {
+    this.students = this.students.filter(s => s.student !== data.student);
+    this.students.push(data);
+    this.students.sort((a,b) => a.student.localeCompare(b.student));
+    this.save();
+  },
+  clear() {
+    this.students = [];
+    sessionStorage.removeItem(this._key);
+  },
+  get(studentName) {
+    return this.students.find(s => s.student === studentName);
+  },
+  getAll() {
+    return [...this.students];
+  },
+  getAggregatedStats() {
+    const all = this.students;
+    let totalQ = 0, totalC = 0, totalW = 0;
+    all.forEach(s => {
+      s.history.forEach(h => {
+        totalQ += h.total || 0;
+        totalC += h.correct || 0;
+      });
+      totalW += (s.wrongAnswers || []).length;
+    });
+    return {
+      studentCount: all.length,
+      totalQuestions: totalQ,
+      totalCorrect: totalC,
+      accuracy: totalQ > 0 ? Math.round((totalC / totalQ) * 100) : 0,
+      totalWrongs: totalW,
+    };
+  },
+  getTopicStats() {
+    const topicMap = {};
+    this.students.forEach(s => {
+      s.history.forEach(h => {
+        if (!h.topicBreakdown) return;
+        Object.entries(h.topicBreakdown).forEach(([topic, tb]) => {
+          if (!topicMap[topic]) topicMap[topic] = { correct:0, total:0 };
+          topicMap[topic].correct += tb.correct || 0;
+          topicMap[topic].total += tb.total || 0;
+        });
+      });
+      (s.wrongAnswers || []).forEach(w => {
+        const t = w.topic || 'Unknown';
+        if (!topicMap[t]) topicMap[t] = { correct:0, total:0, wrongCount:0 };
+        topicMap[t].wrongCount = (topicMap[t].wrongCount || 0) + 1;
+      });
+    });
+    return topicMap;
+  },
+  getStudentTopicWrongs(studentName) {
+    const s = this.students.find(x => x.student === studentName);
+    if (!s) return {};
+    const map = {};
+    (s.wrongAnswers || []).forEach(w => {
+      const t = w.topic || 'Unknown';
+      map[t] = (map[t] || 0) + 1;
+    });
+    return map;
+  }
+};
+
+function accClass(pct) {
+  if (pct >= 80) return 'high';
+  if (pct >= 60) return 'mid';
+  return 'low';
+}
+function accLabel(pct) {
+  if (pct >= 80) return 'good';
+  if (pct >= 60) return 'ok';
+  return 'bad';
+}
+function fmtDate(iso) {
+  if (!iso) return '-';
+  try { return new Date(iso).toLocaleDateString(); }
+  catch { return iso.slice(0,10); }
+}
+
+function renderAll() {
+  renderStats();
+  renderStudentTable();
+  renderTopicBreakdown();
+  renderHeatmap();
+}
+
+function renderStats() {
+  const st = AdminStore.getAggregatedStats();
+  document.getElementById('ov-students').textContent = st.studentCount;
+  document.getElementById('ov-total').textContent = st.totalQuestions;
+  document.getElementById('ov-accuracy').textContent = st.accuracy + '%';
+  document.getElementById('ov-wrongs').textContent = st.totalWrongs;
+}
+
+function renderStudentTable() {
+  const tb = document.getElementById('student-tbody');
+  const msg = document.getElementById('no-data-msg');
+  const students = AdminStore.getAll();
+
+  if (students.length === 0) {
+    tb.innerHTML = '';
+    msg.style.display = 'block';
+    return;
+  }
+  msg.style.display = 'none';
+
+  tb.innerHTML = students.map(s => {
+    let total = 0, correct = 0;
+    s.history.forEach(h => { total += h.total || 0; correct += h.correct || 0; });
+    const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+    const wrongCount = (s.wrongAnswers || []).length;
+    const practiceCount = s.history.length;
+    const lastDate = s.exportedAt ? fmtDate(s.exportedAt) : '-';
+    return `<tr>
+      <td><span class="name" onclick="showDetail('${escapeHTML(s.student)}')">${escapeHTML(s.student)}</span></td>
+      <td>${total}</td>
+      <td><span class="accuracy ${accClass(pct)}">${pct}%</span></td>
+      <td>${wrongCount}</td>
+      <td>${practiceCount}</td>
+      <td style="color:var(--text-muted);font-size:12px;">${lastDate}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderTopicBreakdown() {
+  const container = document.getElementById('topic-breakdown');
+  const topicMap = AdminStore.getTopicStats();
+  const entries = Object.entries(topicMap).sort((a,b) => {
+    return (b[1].total || 0) - (a[1].total || 0);
+  });
+
+  if (entries.length === 0) {
+    container.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:20px;">No data yet</p>';
+    return;
+  }
+
+  container.innerHTML = entries.map(([topic, stats]) => {
+    const total = stats.total || 0;
+    const correct = stats.correct || 0;
+    const wrong = total - correct;
+    const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+    const correctW = total > 0 ? (correct / total) * 100 : 0;
+    const wrongW = total > 0 ? (wrong / total) * 100 : 0;
+    return `<div class="topic-bar-wrap">
+      <span class="topic-bar-label">${escapeHTML(topic)}</span>
+      <div class="topic-bar-track">
+        <div class="topic-bar-correct" style="width:${correctW}%"></div>
+        <div class="topic-bar-wrong" style="width:${wrongW}%"></div>
+      </div>
+      <span class="topic-bar-stat">${total}Q - ${pct}%</span>
+    </div>`;
+  }).join('');
+}
+
+function renderHeatmap() {
+  const head = document.getElementById('heatmap-head');
+  const body = document.getElementById('heatmap-body');
+  const msg = document.getElementById('heatmap-msg');
+  const students = AdminStore.getAll();
+
+  if (students.length === 0) {
+    head.innerHTML = ''; body.innerHTML = '';
+    msg.style.display = 'block';
+    return;
+  }
+  msg.style.display = 'none';
+
+  const allTopics = new Set();
+  students.forEach(s => {
+    const tw = AdminStore.getStudentTopicWrongs(s.student);
+    Object.keys(tw).forEach(t => allTopics.add(t));
+  });
+  const topics = [...allTopics].sort();
+
+  head.innerHTML = `<tr><th style="text-align:left;width:120px;">Topic</th>${students.map(s =>
+    `<th>${escapeHTML(s.student)}</th>`
+  ).join('')}<th style="color:var(--text-muted);">Total</th></tr>`;
+
+  const maxVal = Math.max(1, ...topics.map(t => {
+    let sum = 0;
+    students.forEach(s => {
+      const tw = AdminStore.getStudentTopicWrongs(s.student);
+      sum += tw[t] || 0;
+    });
+    return sum;
+  }));
+
+  body.innerHTML = topics.map(topic => {
+    const cells = students.map(s => {
+      const tw = AdminStore.getStudentTopicWrongs(s.student);
+      const v = tw[topic] || 0;
+      const w = (v / maxVal) * 100;
+      return `<td>${v > 0 ? `<span class="heatbar" style="width:${Math.max(w, 2)}px"></span> ${v}` : '-'}</td>`;
+    });
+    let totalCol = 0;
+    students.forEach(s => {
+      const tw = AdminStore.getStudentTopicWrongs(s.student);
+      totalCol += tw[topic] || 0;
+    });
+    return `<tr><td style="text-align:left;font-weight:600;">${escapeHTML(topic)}</td>${cells.join('')}<td style="font-weight:600;color:var(--wrong);">${totalCol}</td></tr>`;
+  }).join('');
+}
+
+function escapeHTML(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function renderStem(stem, imgClass = 'we-q-image') {
+  if (!stem) return 'No question text';
+  let html = escapeHTML(stem);
+  html = html.replace(/images\/image(\d+)\.png/g, function(match, num) {
+    return `<img class="${imgClass}" src="images/image${num}.png" alt="Question image">`;
+  });
+  html = html.replace(/\n/g, '<br>');
+  return html;
+}
+
+function waitForImages(container) {
+  const imgs = container.querySelectorAll('img');
+  const promises = Array.from(imgs).map(img => {
+    if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
+    return new Promise((resolve) => {
+      img.onload = resolve;
+      img.onerror = resolve;
+      setTimeout(resolve, 5000);
+    });
+  });
+  return Promise.all(promises);
+}
+
+async function embedImages(container) {
+  const imgs = Array.from(container.querySelectorAll('img'));
+  await Promise.all(imgs.map(async (img) => {
+    const src = img.getAttribute('src');
+    if (!src || src.startsWith('data:')) return;
+    try {
+      const url = new URL(src, location.href).href;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('fetch failed: ' + res.status);
+      const blob = await res.blob();
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      img.src = base64;
+    } catch (e) {
+      console.warn('embedImages: skip', src, e.message);
+    }
+  }));
+}
+
+function showDetail(name) {
+  const s = AdminStore.get(name);
+  if (!s) return;
+
+  let total = 0, correct = 0;
+  s.history.forEach(h => { total += h.total || 0; correct += h.correct || 0; });
+  const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+  const wrongs = s.wrongAnswers || [];
+
+  document.getElementById('detail-content').innerHTML = `
+    <button class="detail-close" onclick="closeDetail()">&#10005;</button>
+    <div class="detail-name">${escapeHTML(s.student)} - Details</div>
+    <div class="detail-meta">
+      <div class="detail-meta-item">
+        <div class="v">${total}</div><div class="l">Total Questions</div>
+      </div>
+      <div class="detail-meta-item">
+        <div class="v">${pct}%</div><div class="l">Accuracy</div>
+      </div>
+      <div class="detail-meta-item">
+        <div class="v">${wrongs.length}</div><div class="l">Wrong Count</div>
+      </div>
+      <div class="detail-meta-item">
+        <div class="v">${s.history.length}</div><div class="l">Sessions</div>
+      </div>
+      <div class="detail-meta-item">
+        <div class="v">${fmtDate(s.exportedAt)}</div><div class="l">Export Date</div>
+      </div>
+    </div>
+    <div class="detail-section">
+      <h3>&#x1F4CB; Practice History</h3>
+      ${s.history.slice().reverse().map(h => {
+        const acc = h.total > 0 ? Math.round((h.correct/h.total)*100) : 0;
+        return `<div class="history-item">
+          <span>${fmtDate(h.date || h.timestamp)} - ${h.total || 0}Q - Topics: ${h.topic || '-'}</span>
+          <span class="acc ${accLabel(acc)}">${acc}%</span>
+        </div>`;
+      }).join('') || '<p style="color:var(--text-muted);">No practice records</p>'}
+    </div>
+    <div class="detail-section">
+      <h3>&#x1F4DD; Wrong Bank (${wrongs.length} questions)</h3>
+      ${wrongs.map(w => `
+        <div class="wrong-item">
+          <div class="q-stem">[${escapeHTML(w.id || '?')}] ${escapeHTML(w.stem || 'No question text')}</div>
+          <div class="q-meta">
+            Topic: ${escapeHTML(w.topic || '-')} -
+            Your answer: ${Array.isArray(w.yourAnswer) ? w.yourAnswer.join(', ') : w.yourAnswer} -
+            Correct: ${Array.isArray(w.answer) ? w.answer.join(', ') : w.answer}
+          </div>
+        </div>
+      `).join('') || '<p style="color:var(--text-muted);">No wrong questions</p>'}
+    </div>
+  `;
+
+  document.getElementById('detail-overlay').classList.remove('hidden');
+}
+
+function closeDetail() {
+  document.getElementById('detail-overlay').classList.add('hidden');
+}
+
+function handleFiles(files) {
+  const names = [];
+  Array.from(files).forEach(file => {
+    if (!file.name.endsWith('.json')) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (data.student && data.history && data.wrongAnswers) {
+          AdminStore.add(data);
+          names.push(data.student);
+          renderAll();
+          updateFileChips();
+        }
+      } catch (ex) {
+        alert(`Failed to parse ${file.name}: ${ex.message}`);
+      }
+    };
+    reader.readAsText(file);
+  });
+}
+
+function updateFileChips() {
+  const list = document.getElementById('file-list');
+  const students = AdminStore.getAll();
+  if (students.length === 0) {
+    list.innerHTML = '';
+    return;
+  }
+  list.innerHTML = students.map(s =>
+    `<span class="file-chip">${escapeHTML(s.student)}</span>`
+  ).join('');
+}
+
+function init() {
+  AdminStore.init();
+
+  const loginOverlay = document.getElementById('login-overlay');
+  const adminPw = document.getElementById('admin-password');
+  const loginErr = document.getElementById('admin-error');
+  const loginBtn = document.getElementById('admin-login-btn');
+
+  const doLogin = () => {
+    const pw = adminPw.value.trim();
+    if (!pw) { loginErr.textContent = 'Please enter password'; return; }
+    loginBtn.disabled = true;
+    loginBtn.textContent = 'Verifying...';
+
+    const ok = AdminAuth.login(pw);
+
+    if (ok) {
+      loginOverlay.classList.add('hidden');
+      document.getElementById('app').classList.add('active');
+      sessionStorage.setItem('esat_admin_logged', '1');
+      adminPw.value = '';
+      renderAll();
+      updateFileChips();
+    } else {
+      loginErr.textContent = 'Wrong password';
+      adminPw.value = '';
+      adminPw.focus();
+    }
+    loginBtn.disabled = false;
+    loginBtn.textContent = 'Enter';
+  };
+
+  loginBtn.onclick = doLogin;
+  adminPw.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') doLogin();
+  });
+
+  const zone = document.getElementById('import-zone');
+  const fileInput = document.getElementById('file-input');
+
+  zone.onclick = () => fileInput.click();
+  zone.ondragover = (e) => { e.preventDefault(); zone.classList.add('drag-over'); };
+  zone.ondragleave = () => zone.classList.remove('drag-over');
+  zone.ondrop = (e) => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    handleFiles(e.dataTransfer.files);
+  };
+  fileInput.onchange = () => {
+    handleFiles(fileInput.files);
+    fileInput.value = '';
+  };
+
+  document.getElementById('btn-clear-data').onclick = () => {
+    if (confirm('Clear all imported student data? This cannot be undone.')) {
+      AdminStore.clear();
+      renderAll();
+      updateFileChips();
+    }
+  };
+
+  document.getElementById('btn-export-wrong-pdf').onclick = async () => {
+    const container = document.getElementById('wrong-export');
+    const students = AdminStore.getAll();
+    if (students.length === 0) {
+      alert('Please import student data first');
+      return;
+    }
+
+    let html = '';
+    const totalWrongs = students.reduce((sum, s) => sum + (s.wrongAnswers || []).length, 0);
+    html += `<div class="we-cover">
+      <h2>ESAT - Student Wrong Questions</h2>
+      <p>${students.length} students - ${totalWrongs} wrong questions</p>
+      <p>Generated: ${new Date().toLocaleString()}</p>
+    </div>`;
+
+    students.forEach(s => {
+      const wrongs = s.wrongAnswers || [];
+      html += `<div class="we-student-title">Student: ${escapeHTML(s.student)} (${wrongs.length} wrongs)</div>`;
+      if (wrongs.length === 0) {
+        html += `<div class="we-empty">No wrong questions</div>`;
+        return;
+      }
+      wrongs.forEach((w, idx) => {
+        const optionsHtml = (w.options || []).map(opt => {
+          const isCorrect = (w.answer || []).includes(opt.key);
+          return `<div class="we-option ${isCorrect ? 'correct' : ''}">${opt.key}. ${escapeHTML(opt.text || '')}</div>`;
+        }).join('');
+        const imgHtml = w.image ? `<img class="we-q-image" src="${escapeHTML(w.image)}" alt="Question image">` : '';
+        html += `
+          <div class="we-question">
+            <div class="we-q-meta">${idx + 1}. [${escapeHTML(w.id || '?')}] Topic: ${escapeHTML(w.topic || '-')}</div>
+            <div class="we-stem">${renderStem(w.stem)}</div>
+            ${imgHtml}
+            <div class="we-options">${optionsHtml}</div>
+            <div class="we-answer-row">
+              <span class="wrong-ans">Student answer: ${escapeHTML(formatAnswer(w.yourAnswer))}</span>
+              <span class="right-ans">Correct answer: ${escapeHTML(formatAnswer(w.answer))}</span>
+            </div>
+            ${w.explain ? `<div class="we-explain"><strong>Explanation:</strong> ${escapeHTML(w.explain)}</div>` : ''}
+          </div>
+        `;
+      });
+    });
+
+    container.innerHTML = html;
+    container.classList.add('active');
+
+    document.body.classList.add('printing-wrong');
+    const originalTitle = document.title;
+    document.title = `ESAT Wrong Questions - ${new Date().toLocaleDateString()}`;
+
+    await embedImages(container);
+    await waitForImages(container);
+    window.print();
+
+    document.title = originalTitle;
+    container.classList.remove('active');
+    document.body.classList.remove('printing-wrong');
+  };
+
+  document.getElementById('btn-export-practice-pdf').onclick = async () => {
+    const container = document.getElementById('practice-export');
+    const students = AdminStore.getAll();
+    if (students.length === 0) {
+      alert('Please import student data first');
+      return;
+    }
+
+    const seenIds = new Set();
+    const allWrongs = [];
+    students.forEach(s => {
+      (s.wrongAnswers || []).forEach(w => {
+        const qId = w.id || w.stem;
+        if (!seenIds.has(qId)) {
+          seenIds.add(qId);
+          allWrongs.push(w);
+        }
+      });
+    });
+
+    if (allWrongs.length === 0) {
+      alert('No wrong questions to export');
+      return;
+    }
+
+    let html = '';
+    html += `<div class="pe-cover">
+      <h2>ESAT - Wrong Question Practice Sheet</h2>
+      <p>Stems and options only - No answers included</p>
+      <p>${allWrongs.length} questions - Generated: ${new Date().toLocaleString()}</p>
+    </div>`;
+
+    html += `<div class="pe-student-title">All Wrong Questions (${allWrongs.length})</div>`;
+    allWrongs.forEach((w, idx) => {
+      const optionsHtml = (w.options || []).map(opt =>
+        `<div class="pe-option">${opt.key}. ${escapeHTML(opt.text || '')}</div>`
+      ).join('');
+      const imgHtml = w.image ? `<img class="pe-q-image" src="${escapeHTML(w.image)}" alt="Question image">` : '';
+      html += `
+        <div class="pe-question">
+          <div class="pe-q-num">${idx + 1}. [${escapeHTML(w.id || '?')}] ${escapeHTML(w.topic || '-')}</div>
+          <div class="pe-stem">${renderStem(w.stem, 'pe-q-image')}</div>
+          ${imgHtml}
+          <div class="pe-options">${optionsHtml}</div>
+          <div class="pe-blank-line">Your answer:</div>
+        </div>
+      `;
+    });
+
+    students.forEach(s => {
+      const wrongs = s.wrongAnswers || [];
+      if (wrongs.length === 0) return;
+      html += `<div class="pe-student-title">Student: ${escapeHTML(s.student)} (${wrongs.length} wrongs)</div>`;
+      wrongs.forEach((w, idx) => {
+        const optionsHtml = (w.options || []).map(opt =>
+          `<div class="pe-option">${opt.key}. ${escapeHTML(opt.text || '')}</div>`
+        ).join('');
+        const imgHtml = w.image ? `<img class="pe-q-image" src="${escapeHTML(w.image)}" alt="Question image">` : '';
+        html += `
+          <div class="pe-question">
+            <div class="pe-q-num">${idx + 1}. [${escapeHTML(w.id || '?')}] ${escapeHTML(w.topic || '-')}</div>
+            <div class="pe-stem">${escapeHTML(w.stem || 'No question text')}</div>
+            ${imgHtml}
+            <div class="pe-options">${optionsHtml}</div>
+            <div class="pe-blank-line">Your answer:</div>
+          </div>
+        `;
+      });
+    });
+
+    container.innerHTML = html;
+    container.classList.add('active');
+
+    document.body.classList.add('printing-practice');
+    const originalTitle = document.title;
+    document.title = `ESAT Practice Sheet - ${new Date().toLocaleDateString()}`;
+
+    await embedImages(container);
+    await waitForImages(container);
+    window.print();
+
+    document.title = originalTitle;
+    container.classList.remove('active');
+    document.body.classList.remove('printing-practice');
+  };
+
+  function formatAnswer(ans) {
+    if (!ans) return 'N/A';
+    if (Array.isArray(ans)) return ans.length ? ans.join(', ') : 'N/A';
+    return String(ans);
+  }
+
+  document.getElementById('btn-export-pdf').onclick = () => {
+    const title = 'ESAT Student Records';
+    document.title = title;
+    window.print();
+    document.title = 'ESAT Admin';
+  };
+
+  document.getElementById('detail-overlay').onclick = (e) => {
+    if (e.target === document.getElementById('detail-overlay')) {
+      closeDetail();
+    }
+  };
+
+  if (sessionStorage.getItem('esat_admin_logged')) {
+    loginOverlay.classList.add('hidden');
+    document.getElementById('app').classList.add('active');
+    renderAll();
+    updateFileChips();
+  } else {
+    setTimeout(() => adminPw.focus(), 300);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+
+<div id="wrong-export"></div>
+<div id="practice-export"></div>
+
+</body>
+</html>
