@@ -7,7 +7,7 @@ const CORE_ASSETS = [
   './index.html',
   './admin.html',
   './style.css',
-  './questions.enc.js',
+  './questions.enc.js?v=5',
   './auth.js',
   './app.js',
   './manifest.json',
