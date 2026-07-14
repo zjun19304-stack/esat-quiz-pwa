@@ -43,6 +43,33 @@ function getQuestionsByTopics(topicKeys) {
   return QUESTIONS.filter(q => topicKeys.includes(q.topic));
 }
 
+/**
+ * Smart shuffle: avoid repeating recently seen questions across sessions.
+ * Keeps a rolling buffer of recently used question IDs in localStorage.
+ */
+function getSmartShuffledQuestions(pool, count) {
+  if (pool.length === 0) return [];
+  count = Math.min(count, pool.length);
+
+  const recentIds = new Set(Storage.getRecentIds());
+  const freshPool = pool.filter(q => !recentIds.has(q.id));
+  const shuffledFresh = shuffle(freshPool);
+
+  let selected = shuffledFresh.slice(0, count);
+
+  // If not enough fresh questions, fill with recently seen ones (but still shuffled)
+  if (selected.length < count) {
+    const needed = count - selected.length;
+    const recentPool = pool.filter(q => recentIds.has(q.id));
+    const shuffledRecent = shuffle(recentPool);
+    selected = selected.concat(shuffledRecent.slice(0, needed));
+  }
+
+  selected = shuffle(selected);
+  Storage.addRecentIds(selected.map(q => q.id));
+  return selected;
+}
+
 // ════════════════════════════════════════════════════════
 //  2. Storage Layer (localStorage) — per-student isolation
 // ════════════════════════════════════════════════════════
@@ -59,6 +86,7 @@ const Storage = {
       history: `esat_practice_history_${s}`,
       session: `esat_current_session_${s}`,
       settings:`esat_settings_${s}`,
+      recent:  `esat_recent_questions_${s}`,
     };
     this._migrateOnce();
   },
@@ -136,6 +164,22 @@ const Storage = {
   getSession() { return this.get('session', null); },
   saveSession(s) { this.set('session', s); },
   clearSession() { this.remove('session'); },
+
+  // ── Recently Seen Questions (smart shuffle) ──
+  getRecentIds() {
+    const ids = this.get('recent', []);
+    return Array.isArray(ids) ? ids : [];
+  },
+  addRecentIds(ids) {
+    const current = this.getRecentIds();
+    const combined = current.concat(ids);
+    // Keep last 200 IDs to avoid repeats across many sessions
+    if (combined.length > 200) {
+      combined.splice(0, combined.length - 200);
+    }
+    this.set('recent', combined);
+  },
+  clearRecentIds() { this.remove('recent'); },
 
   // ── Data Export ──
   exportData(studentName) {
@@ -333,9 +377,8 @@ const HomeView = {
     // Clear any previous session so PracticeView doesn't restore old questions
     Storage.clearSession();
 
-    const shuffled = shuffle(pool);
-    const count = Math.min(State.questionCount, shuffled.length);
-    State.practiceQuestions = shuffled.slice(0, count);
+    const shuffled = getSmartShuffledQuestions(pool, State.questionCount);
+    State.practiceQuestions = shuffled;
     State.currentIndex = 0;
     State.selectedOptions = [];
     State.confirmed = false;
@@ -717,7 +760,7 @@ const ResultView = {
       }
       // Clear old session so new questions aren't overwritten by restore
       Storage.clearSession();
-      State.practiceQuestions = wrongAnswers.map(a => ({
+      const wrongQuestions = wrongAnswers.map(a => ({
         id: a.questionId,
         topic: a.topic,
         type: a.type,
@@ -728,6 +771,7 @@ const ResultView = {
         explain: a.explain,
         source: a.source,
       }));
+      State.practiceQuestions = shuffle(wrongQuestions);
       State.currentIndex = 0;
       State.selectedOptions = [];
       State.confirmed = false;
@@ -850,7 +894,7 @@ const WrongView = {
       // Clear old session so new questions aren't overwritten by restore
       Storage.clearSession();
 
-      State.practiceQuestions = filtered.map(w => ({
+      const wrongQuestions = filtered.map(w => ({
         id: w.id,
         topic: w.topic,
         type: w.type,
@@ -861,6 +905,7 @@ const WrongView = {
         explain: w.explain,
         source: w.source,
       }));
+      State.practiceQuestions = shuffle(wrongQuestions);
       State.currentIndex = 0;
       State.selectedOptions = [];
       State.confirmed = false;
@@ -881,7 +926,7 @@ const PWA = {
 
   init() {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=6').catch(err => {
+      navigator.serviceWorker.register('sw.js?v=7').catch(err => {
         console.log('SW registration failed:', err);
       });
     }
