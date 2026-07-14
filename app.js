@@ -330,6 +330,9 @@ const HomeView = {
       return;
     }
 
+    // Clear any previous session so PracticeView doesn't restore old questions
+    Storage.clearSession();
+
     const shuffled = shuffle(pool);
     const count = Math.min(State.questionCount, shuffled.length);
     State.practiceQuestions = shuffled.slice(0, count);
@@ -712,6 +715,8 @@ const ResultView = {
         HomeView.toast('No wrong answers this time!');
         return;
       }
+      // Clear old session so new questions aren't overwritten by restore
+      Storage.clearSession();
       State.practiceQuestions = wrongAnswers.map(a => ({
         id: a.questionId,
         topic: a.topic,
@@ -842,6 +847,9 @@ const WrongView = {
         return;
       }
 
+      // Clear old session so new questions aren't overwritten by restore
+      Storage.clearSession();
+
       State.practiceQuestions = filtered.map(w => ({
         id: w.id,
         topic: w.topic,
@@ -873,7 +881,7 @@ const PWA = {
 
   init() {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=5').catch(err => {
+      navigator.serviceWorker.register('sw.js?v=6').catch(err => {
         console.log('SW registration failed:', err);
       });
     }
