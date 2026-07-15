@@ -4,6 +4,8 @@
 
 'use strict';
 
+const APP_VERSION = 'v8';
+
 // ════════════════════════════════════════════════════════
 //  1. Utility Functions
 // ════════════════════════════════════════════════════════
@@ -51,8 +53,18 @@ function getSmartShuffledQuestions(pool, count) {
   if (pool.length === 0) return [];
   count = Math.min(count, pool.length);
 
+  // Remove any duplicate IDs from the pool itself
+  const uniquePool = [];
+  const seen = new Set();
+  for (const q of pool) {
+    if (!seen.has(q.id)) {
+      seen.add(q.id);
+      uniquePool.push(q);
+    }
+  }
+
   const recentIds = new Set(Storage.getRecentIds());
-  const freshPool = pool.filter(q => !recentIds.has(q.id));
+  const freshPool = uniquePool.filter(q => !recentIds.has(q.id));
   const shuffledFresh = shuffle(freshPool);
 
   let selected = shuffledFresh.slice(0, count);
@@ -60,7 +72,7 @@ function getSmartShuffledQuestions(pool, count) {
   // If not enough fresh questions, fill with recently seen ones (but still shuffled)
   if (selected.length < count) {
     const needed = count - selected.length;
-    const recentPool = pool.filter(q => recentIds.has(q.id));
+    const recentPool = uniquePool.filter(q => recentIds.has(q.id));
     const shuffledRecent = shuffle(recentPool);
     selected = selected.concat(shuffledRecent.slice(0, needed));
   }
@@ -89,6 +101,17 @@ const Storage = {
       recent:  `esat_recent_questions_${s}`,
     };
     this._migrateOnce();
+    this._checkVersion();
+  },
+
+  _checkVersion() {
+    const lastVersion = localStorage.getItem('esat_app_version');
+    if (lastVersion !== APP_VERSION) {
+      // Clear volatile session/recent data on app update to avoid stale/buggy state
+      this.clearSession();
+      this.clearRecentIds();
+      localStorage.setItem('esat_app_version', APP_VERSION);
+    }
   },
 
   _migrateOnce() {
@@ -378,7 +401,15 @@ const HomeView = {
     Storage.clearSession();
 
     const shuffled = getSmartShuffledQuestions(pool, State.questionCount);
-    State.practiceQuestions = shuffled;
+
+    // Hard deduplication by question ID — guarantee no repeats in one set
+    const seen = new Map();
+    State.practiceQuestions = shuffled.filter(q => {
+      if (seen.has(q.id)) return false;
+      seen.set(q.id, true);
+      return true;
+    });
+
     State.currentIndex = 0;
     State.selectedOptions = [];
     State.confirmed = false;
@@ -406,11 +437,19 @@ const PracticeView = {
   render() {
     const saved = Storage.getSession();
     if (saved && saved.practiceQuestions && saved.practiceQuestions.length > 0) {
-      State.practiceQuestions = saved.practiceQuestions;
-      State.currentIndex = saved.currentIndex || 0;
-      State.answers = saved.answers || [];
-      State.isWrongRetry = saved.isWrongRetry || false;
-      State.startTime = saved.startTime || Date.now();
+      // Reject sessions that contain duplicate IDs (could come from old cached/buggy state)
+      const ids = saved.practiceQuestions.map(q => q.id);
+      const hasDuplicates = new Set(ids).size !== ids.length;
+
+      if (!hasDuplicates) {
+        State.practiceQuestions = saved.practiceQuestions;
+        State.currentIndex = saved.currentIndex || 0;
+        State.answers = saved.answers || [];
+        State.isWrongRetry = saved.isWrongRetry || false;
+        State.startTime = saved.startTime || Date.now();
+      } else {
+        Storage.clearSession();
+      }
     }
 
     if (State.practiceQuestions.length === 0) {
@@ -926,7 +965,7 @@ const PWA = {
 
   init() {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=7').catch(err => {
+      navigator.serviceWorker.register('sw.js?v=8').catch(err => {
         console.log('SW registration failed:', err);
       });
     }
