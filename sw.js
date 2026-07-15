@@ -1,20 +1,20 @@
 // Service Worker — ESAT PWA (Hardened)
 // Cache-first with network fallback, cache-busting on version change
 
-const CACHE_NAME = 'esat-pwa-v7';
+const CACHE_NAME = 'esat-pwa-v8';
 const CORE_ASSETS = [
   './',
   './index.html',
   './admin.html',
   './style.css',
-  './questions.enc.js?v=7',
+  './questions.enc.js?v=8',
   './auth.js',
   './app.js',
   './manifest.json',
   './icon.svg',
 ];
 
-// Install: pre-cache core resources
+// Install: pre-cache core resources and activate immediately
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -24,24 +24,17 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Activate: purge ALL old caches
+// Activate: purge ALL old caches and take control of clients
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys
           .filter((k) => k !== CACHE_NAME)
-          .map((k) => {
-            return caches.delete(k);
-          })
+          .map((k) => caches.delete(k))
       );
-    }).then(() => {
-      return self.clients.matchAll({ type: 'window' }).then((clients) => {
-        clients.forEach((client) => client.navigate(client.url));
-      });
-    })
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 // Fetch: cache-first for same-origin GET
