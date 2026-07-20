@@ -6,10 +6,10 @@ const CORE_ASSETS = [
   './',
   './index.html',
   './admin.html',
-  './style.css',
+  './style.css?v=28',
   './questions.enc.js?v=28',
-  './auth.js',
-  './app.js',
+  './auth.js?v=28',
+  './app.js?v=28',
   './manifest.json',
   './icon.svg',
 ];
