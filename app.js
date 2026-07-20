@@ -4,7 +4,7 @@
 
 'use strict';
 
-const APP_VERSION = 'v27';
+const APP_VERSION = 'v28';
 
 // ════════════════════════════════════════════════════════
 //  1. Utility Functions
@@ -26,6 +26,16 @@ function safeUrl(url) {
   if (trimmed.startsWith('javascript:') || trimmed.startsWith('vbscript:')) return '';
   if (trimmed.startsWith('data:') && !trimmed.startsWith('data:image/')) return '';
   return url;
+}
+
+const _preloadCache = new Set();
+function preloadImages(urls) {
+  urls.forEach(u => {
+    if (!u || _preloadCache.has(u)) return;
+    _preloadCache.add(u);
+    const img = new Image();
+    img.src = u;
+  });
 }
 
 function shuffle(arr) {
@@ -484,15 +494,23 @@ const PracticeView = {
     const imgWrap = document.getElementById('q-image-wrap');
     const imgEl = document.getElementById('q-image');
     imgEl.onerror = null;
+    imgEl.onload = null;
     if (q.image) {
       const safe = safeUrl(q.image);
+      imgWrap.classList.add('loading');
       imgEl.src = safe;
       imgEl.alt = q.stem;
+      imgEl.onload = () => { imgWrap.classList.remove('loading'); };
       imgEl.onerror = () => {
         imgWrap.classList.add('hidden');
+        imgWrap.classList.remove('loading');
         imgEl.onerror = null;
       };
       imgWrap.classList.remove('hidden');
+
+      // Preload next 2 images in background
+      const remaining = State.practiceQuestions.slice(State.currentIndex + 1, State.currentIndex + 3);
+      preloadImages(remaining.map(q => q.image).filter(Boolean));
     } else {
       imgWrap.classList.add('hidden');
       imgEl.src = '';
