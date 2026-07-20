@@ -4,7 +4,7 @@
 
 'use strict';
 
-const APP_VERSION = 'v19';
+const APP_VERSION = 'v20';
 
 // ════════════════════════════════════════════════════════
 //  1. Utility Functions
