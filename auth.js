@@ -142,52 +142,88 @@ const Auth = {
   },
 
   /**
-   * Try to decrypt question bank with password
+   * Try to decrypt question bank with password.
+   * Supports both new shared-key format ({d,k}) and legacy per-student format (array).
    */
   async tryDecrypt(password) {
-    if (!window.__ESAT_ENC__ || !Array.isArray(window.__ESAT_ENC__)) {
+    if (!window.__ESAT_ENC__) {
       console.error('Encrypted question bank not loaded');
       return false;
     }
 
-    const totalBlobs = window.__ESAT_ENC__.length;
-    for (let i = 0; i < totalBlobs; i++) {
-      try {
-        const decrypted = await this.decryptData(window.__ESAT_ENC__[i], password);
-        if (decrypted) {
+    // New shared master-key format: {"d":"...","k":[["Name","..."],...]}
+    if (window.__ESAT_ENC__.d && window.__ESAT_ENC__.k) {
+      const dataBlob = window.__ESAT_ENC__.d;
+      const keyEntries = window.__ESAT_ENC__.k;
+      for (const [name, keyBlob] of keyEntries) {
+        try {
+          const masterKey = await this.decryptKey(keyBlob, password);
+          const decrypted = await this.decryptWithKey(dataBlob, masterKey);
+          const data = JSON.parse(decrypted);
+          if (data.topics && data.questions) {
+            window.TOPICS = data.topics;
+            window.QUESTIONS = data.questions;
+            this.currentStudent = name;
+            return true;
+          }
+        } catch (e) { /* try next student */ }
+      }
+      return false;
+    }
+
+    // Legacy format: array of per-student blobs
+    if (Array.isArray(window.__ESAT_ENC__)) {
+      for (let i = 0; i < window.__ESAT_ENC__.length; i++) {
+        try {
+          const decrypted = await this.decryptLegacy(window.__ESAT_ENC__[i], password);
           const data = JSON.parse(decrypted);
           if (data.topics && data.questions && data.student) {
-            if (!Array.isArray(data.topics) || !Array.isArray(data.questions)) {
-              continue;
-            }
             window.TOPICS = data.topics;
             window.QUESTIONS = data.questions;
             this.currentStudent = data.student || 'Student';
             return true;
           }
-        }
-      } catch (e) {
-        // Decryption failed
+        } catch (e) { /* try next */ }
       }
     }
+
     return false;
   },
 
   /**
-   * Decrypt data: XOR stream cipher with SHA-256 counter mode keystream
+   * Decrypt master key blob (44 bytes base64 → 32 bytes) with student password.
    */
-  async decryptData(encryptedB64, password) {
+  async decryptKey(keyBlobB64, password) {
+    const keyData = new TextEncoder().encode(password);
+    const pwHash = new Uint8Array(await crypto.subtle.digest('SHA-256', keyData));
+    const encrypted = Uint8Array.from(atob(keyBlobB64), c => c.charCodeAt(0));
+    const keystream = await this.generateKeystream(pwHash, encrypted.length);
+    const masterKey = new Uint8Array(encrypted.length);
+    for (let i = 0; i < encrypted.length; i++) masterKey[i] = encrypted[i] ^ keystream[i];
+    return masterKey;
+  },
+
+  /**
+   * Decrypt data blob with master key.
+   */
+  async decryptWithKey(dataBlobB64, masterKey) {
+    const encrypted = Uint8Array.from(atob(dataBlobB64), c => c.charCodeAt(0));
+    const keystream = await this.generateKeystream(masterKey, encrypted.length);
+    const decrypted = new Uint8Array(encrypted.length);
+    for (let i = 0; i < encrypted.length; i++) decrypted[i] = encrypted[i] ^ keystream[i];
+    return new TextDecoder().decode(decrypted);
+  },
+
+  /**
+   * Legacy decrypt: full data per-student (old format).
+   */
+  async decryptLegacy(encryptedB64, password) {
     const keyData = new TextEncoder().encode(password);
     const keyHash = new Uint8Array(await crypto.subtle.digest('SHA-256', keyData));
-
     const encrypted = Uint8Array.from(atob(encryptedB64), c => c.charCodeAt(0));
     const keystream = await this.generateKeystream(keyHash, encrypted.length);
-
     const decrypted = new Uint8Array(encrypted.length);
-    for (let i = 0; i < encrypted.length; i++) {
-      decrypted[i] = encrypted[i] ^ keystream[i];
-    }
-
+    for (let i = 0; i < encrypted.length; i++) decrypted[i] = encrypted[i] ^ keystream[i];
     return new TextDecoder().decode(decrypted);
   },
 
