@@ -1,13 +1,13 @@
 // Service Worker — ESAT PWA (Hardened)
 // Cache-first with network fallback, cache-busting on version change
 
-const CACHE_NAME = 'esat-pwa-v24';
+const CACHE_NAME = 'esat-pwa-v25';
 const CORE_ASSETS = [
   './',
   './index.html',
   './admin.html',
   './style.css',
-  './questions.enc.js?v=24',
+  './questions.enc.js?v=25',
   './auth.js',
   './app.js',
   './manifest.json',
