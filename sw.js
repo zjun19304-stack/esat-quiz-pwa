@@ -1,15 +1,15 @@
 // Service Worker — ESAT PWA (Hardened)
 // Cache-first with network fallback, cache-busting on version change
 
-const CACHE_NAME = 'esat-pwa-v28';
+const CACHE_NAME = 'esat-pwa-v29';
 const CORE_ASSETS = [
   './',
   './index.html',
   './admin.html',
-  './style.css?v=28',
-  './questions.enc.js?v=28',
-  './auth.js?v=28',
-  './app.js?v=28',
+  './style.css?v=29',
+  './questions.enc.js?v=29',
+  './auth.js?v=29',
+  './app.js?v=29',
   './manifest.json',
   './icon.svg',
 ];
@@ -37,13 +37,14 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: cache-first for same-origin GET
+// Fetch: network-first for images (always get latest), cache-first for others
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
   if (url.origin !== location.origin) return;
 
+  // Navigate: network-first, cache fallback
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
@@ -65,6 +66,25 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Images: network-first → always serve latest, fallback to cache if offline
+  if (url.pathname.match(/\.(png|jpg|jpeg|gif|svg|webp|ico)$/i)) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, clone);
+            });
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Other assets: cache-first
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
