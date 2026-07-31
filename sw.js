@@ -1,107 +1,565 @@
-// Service Worker — ESAT PWA (Hardened)
-// Cache-first with network fallback, cache-busting on version change
-
-const CACHE_NAME = 'esat-pwa-v30';
+// Service Worker — ESAT PWA v31 — Offline-ready with background image pre-cache
+const CACHE_NAME = 'esat-pwa-v31';
 const CORE_ASSETS = [
   './',
   './index.html',
   './admin.html',
-  './style.css?v=30',
-  './questions.enc.js?v=30',
-  './auth.js?v=30',
-  './app.js?v=30',
+  './style.css?v=31',
+  './questions.enc.js?v=31',
+  './auth.js?v=31',
+  './app.js?v=31',
   './manifest.json',
   './icon.svg',
 ];
 
-// Install: pre-cache core resources and activate immediately
+// All 453 question images — pre-cached in background after login
+const IMAGE_CACHE = [
+    "./images/ace/image_001.png",
+    "./images/ace/image_002.png",
+    "./images/ace/image_003.png",
+    "./images/ace/image_004.png",
+    "./images/ace/image_005.png",
+    "./images/ace/image_006.png",
+    "./images/ace/image_007.png",
+    "./images/ace/image_008.png",
+    "./images/ace/image_009.png",
+    "./images/ace/image_010.png",
+    "./images/ace/image_011.png",
+    "./images/ace/image_012.png",
+    "./images/ace/image_013.png",
+    "./images/ace/image_014.png",
+    "./images/ace/image_015.png",
+    "./images/ace/image_016.png",
+    "./images/ace/image_017.png",
+    "./images/ace/image_018.png",
+    "./images/ace/image_019.png",
+    "./images/ace/image_020.png",
+    "./images/ace/image_021.png",
+    "./images/ace/image_022.png",
+    "./images/ace/image_023.png",
+    "./images/ace/image_024.png",
+    "./images/ace/image_025.png",
+    "./images/ace/image_026.png",
+    "./images/ace/image_027.png",
+    "./images/ace/image_028.png",
+    "./images/ace/image_029.png",
+    "./images/ace/image_030.png",
+    "./images/ace/image_031.png",
+    "./images/ace/image_032.png",
+    "./images/ace/image_033.png",
+    "./images/ace/image_034.png",
+    "./images/ace/image_035.png",
+    "./images/ace/image_036.png",
+    "./images/anp/image_001.png",
+    "./images/anp/image_002.png",
+    "./images/anp/image_003.png",
+    "./images/anp/image_004.png",
+    "./images/anp/image_005.png",
+    "./images/anp/image_006.png",
+    "./images/anp/image_007.png",
+    "./images/anp/image_008.png",
+    "./images/anp/image_009.png",
+    "./images/anp/image_010.png",
+    "./images/anp/image_011.png",
+    "./images/anp/image_012.png",
+    "./images/anp/image_013.png",
+    "./images/anp/image_014.png",
+    "./images/anp/image_015.png",
+    "./images/anp/image_016.png",
+    "./images/anp/image_017.png",
+    "./images/anp/image_018.png",
+    "./images/anp/image_019.png",
+    "./images/anp/image_020.png",
+    "./images/anp/image_021.png",
+    "./images/anp/image_022.png",
+    "./images/anp/image_023.png",
+    "./images/anp/image_024.png",
+    "./images/anp/image_025.png",
+    "./images/anp/image_026.png",
+    "./images/anp/image_027.png",
+    "./images/anp/image_028.png",
+    "./images/anp/image_029.png",
+    "./images/asp/image_001.png",
+    "./images/asp/image_002.png",
+    "./images/asp/image_003.png",
+    "./images/asp/image_004.png",
+    "./images/asp/image_005.png",
+    "./images/asp/image_006.png",
+    "./images/asp/image_007.png",
+    "./images/asp/image_008.png",
+    "./images/asp/image_009.png",
+    "./images/asp/image_010.png",
+    "./images/asp/image_011.png",
+    "./images/asp/image_012.png",
+    "./images/asp/image_013.png",
+    "./images/asp/image_014.png",
+    "./images/asp/image_015.png",
+    "./images/asp/image_016.png",
+    "./images/asp/image_017.png",
+    "./images/asp/image_018.png",
+    "./images/asp/image_019.png",
+    "./images/asp/image_020.png",
+    "./images/asp/image_021.png",
+    "./images/asp/image_022.png",
+    "./images/asp/image_023.png",
+    "./images/asp/image_024.png",
+    "./images/asp/image_025.png",
+    "./images/asp/image_026.png",
+    "./images/asp/image_027.png",
+    "./images/asp/image_028.png",
+    "./images/asp/image_029.png",
+    "./images/asp/image_030.png",
+    "./images/asp/image_031.png",
+    "./images/asp/image_032.png",
+    "./images/asp/image_033.png",
+    "./images/asp/image_034.png",
+    "./images/asp/image_035.png",
+    "./images/asp/image_036.png",
+    "./images/asp/image_037.png",
+    "./images/asp/image_038.png",
+    "./images/asp/image_039.png",
+    "./images/asp/image_040.png",
+    "./images/asp/image_041.png",
+    "./images/asp/image_042.png",
+    "./images/bst/image_001.png",
+    "./images/bst/image_002.png",
+    "./images/bst/image_003.png",
+    "./images/bst/image_004.png",
+    "./images/bst/image_005.png",
+    "./images/bst/image_006.png",
+    "./images/bst/image_007.png",
+    "./images/bst/image_008.png",
+    "./images/bst/image_009.png",
+    "./images/bst/image_010.png",
+    "./images/bst/image_011.png",
+    "./images/bst/image_012.png",
+    "./images/bst/image_013.png",
+    "./images/bst/image_014.png",
+    "./images/cam/image_001.png",
+    "./images/cam/image_002.png",
+    "./images/cam/image_003.png",
+    "./images/cam/image_004.png",
+    "./images/cam/image_005.png",
+    "./images/cam/image_006.png",
+    "./images/cam/image_007.png",
+    "./images/cam/image_008.png",
+    "./images/cam/image_009.png",
+    "./images/cam/image_010.png",
+    "./images/cam/image_011.png",
+    "./images/cam/image_012.png",
+    "./images/cam/image_013.png",
+    "./images/cam/image_014.png",
+    "./images/cam/image_015.png",
+    "./images/cam/image_016.png",
+    "./images/cam/image_017.png",
+    "./images/cam/image_018.png",
+    "./images/cam/image_019.png",
+    "./images/cam/image_020.png",
+    "./images/cam/image_021.png",
+    "./images/cam/image_022.png",
+    "./images/cam/image_023.png",
+    "./images/cam/image_024.png",
+    "./images/cam/image_025.png",
+    "./images/cam/image_026.png",
+    "./images/cam/image_027.png",
+    "./images/cam/image_028.png",
+    "./images/cam/image_029.png",
+    "./images/cam/image_030.png",
+    "./images/cam/image_031.png",
+    "./images/cam/image_032.png",
+    "./images/cam/image_033.png",
+    "./images/cam/image_034.png",
+    "./images/cam/image_035.png",
+    "./images/cam/image_036.png",
+    "./images/cam/image_037.png",
+    "./images/cam/image_038.png",
+    "./images/cam/image_039.png",
+    "./images/cam/image_040.png",
+    "./images/cam/image_041.png",
+    "./images/cam/image_042.png",
+    "./images/cam/image_043.png",
+    "./images/cam/image_044.png",
+    "./images/cam/image_045.png",
+    "./images/cam/image_046.png",
+    "./images/cam/image_047.png",
+    "./images/cam/image_048.png",
+    "./images/cam/image_049.png",
+    "./images/cam/image_050.png",
+    "./images/cam/image_051.png",
+    "./images/cam/image_052.png",
+    "./images/cam/image_053.png",
+    "./images/cam/image_054.png",
+    "./images/cam/image_055.png",
+    "./images/cam/image_056.png",
+    "./images/cam/image_057.png",
+    "./images/cam/image_058.png",
+    "./images/cam/image_059.png",
+    "./images/cam/image_060.png",
+    "./images/cam/image_061.png",
+    "./images/cam/image_062.png",
+    "./images/cam/image_063.png",
+    "./images/cam/image_064.png",
+    "./images/cam/image_065.png",
+    "./images/cel/image_001.png",
+    "./images/cel/image_002.png",
+    "./images/cel/image_003.png",
+    "./images/cel/image_004.png",
+    "./images/cel/image_005.png",
+    "./images/cel/image_006.png",
+    "./images/cel/image_007.png",
+    "./images/cel/image_008.png",
+    "./images/cel/image_009.png",
+    "./images/cel/image_010.png",
+    "./images/cel/image_011.png",
+    "./images/cel/image_012.png",
+    "./images/cel/image_013.png",
+    "./images/cel/image_014.png",
+    "./images/cel/image_015.png",
+    "./images/cel/image_016.png",
+    "./images/cel/image_017.png",
+    "./images/cel/image_018.png",
+    "./images/eco/image_001.png",
+    "./images/eco/image_002.png",
+    "./images/eco/image_003.png",
+    "./images/eco/image_004.png",
+    "./images/eco/image_005.png",
+    "./images/eco/image_006.png",
+    "./images/eco/image_007.png",
+    "./images/eco/image_008.png",
+    "./images/eco/image_009.png",
+    "./images/eco/image_010.png",
+    "./images/eco/image_011.png",
+    "./images/eco/image_012.png",
+    "./images/eco/image_013.png",
+    "./images/eco/image_014.png",
+    "./images/eco/image_015.png",
+    "./images/eco/image_016.png",
+    "./images/eco/image_017.png",
+    "./images/eco/image_018.png",
+    "./images/eco/image_019.png",
+    "./images/eco/image_020.png",
+    "./images/eco/image_021.png",
+    "./images/eco/image_022.png",
+    "./images/eco/image_023.png",
+    "./images/eco/image_024.png",
+    "./images/eco/image_025.png",
+    "./images/eco/image_026.png",
+    "./images/eco/image_027.png",
+    "./images/eco/image_028.png",
+    "./images/enm/image_001.png",
+    "./images/enm/image_002.png",
+    "./images/enm/image_003.png",
+    "./images/enm/image_004.png",
+    "./images/enm/image_005.png",
+    "./images/enm/image_006.png",
+    "./images/enm/image_007.png",
+    "./images/enm/image_008.png",
+    "./images/enm/image_009.png",
+    "./images/enm/image_010.png",
+    "./images/enm/image_011.png",
+    "./images/enm/image_012.png",
+    "./images/enm/image_013.png",
+    "./images/enm/image_014.png",
+    "./images/enm/image_015.png",
+    "./images/enm/image_016.png",
+    "./images/enm/image_017.png",
+    "./images/enm/image_018.png",
+    "./images/enm/image_019.png",
+    "./images/enm/image_020.png",
+    "./images/enm/image_021.png",
+    "./images/enm/image_022.png",
+    "./images/enm/image_023.png",
+    "./images/enm/image_024.png",
+    "./images/enm/image_025.png",
+    "./images/enm/image_026.png",
+    "./images/enm/image_027.png",
+    "./images/enm/image_028.png",
+    "./images/enm/image_029.png",
+    "./images/evl/image_001.png",
+    "./images/evl/image_002.png",
+    "./images/evl/image_003.png",
+    "./images/evl/image_004.png",
+    "./images/evl/image_005.png",
+    "./images/evl/image_006.png",
+    "./images/evl/image_007.png",
+    "./images/evl/image_008.png",
+    "./images/evl/image_009.png",
+    "./images/evl/image_010.png",
+    "./images/evl/image_011.png",
+    "./images/evl/image_012.png",
+    "./images/evl/image_013.png",
+    "./images/evl/image_014.png",
+    "./images/evl/image_015.png",
+    "./images/evl/image_016.png",
+    "./images/evl/image_017.png",
+    "./images/evl/image_018.png",
+    "./images/evl/image_019.png",
+    "./images/evl/image_020.png",
+    "./images/evl/image_021.png",
+    "./images/evl/image_022.png",
+    "./images/evl/image_023.png",
+    "./images/evl/image_024.png",
+    "./images/evl/image_025.png",
+    "./images/evl/image_026.png",
+    "./images/evl/image_027.png",
+    "./images/exp/image_001.png",
+    "./images/exp/image_002.png",
+    "./images/exp/image_003.png",
+    "./images/exp/image_004.png",
+    "./images/exp/image_005.png",
+    "./images/exp/image_006.png",
+    "./images/exp/image_007.png",
+    "./images/exp/image_008.png",
+    "./images/exp/image_009.png",
+    "./images/exp/image_010.png",
+    "./images/exp/image_011.png",
+    "./images/exp/image_012.png",
+    "./images/exp/image_013.png",
+    "./images/exp/image_014.png",
+    "./images/exp/image_015.png",
+    "./images/exp/image_016.png",
+    "./images/exp/image_017.png",
+    "./images/exp/image_018.png",
+    "./images/exp/image_019.png",
+    "./images/exp/image_020.png",
+    "./images/exp/image_021.png",
+    "./images/exp/image_022.png",
+    "./images/exp/image_023.png",
+    "./images/exp/image_024.png",
+    "./images/exp/image_025.png",
+    "./images/gte/image_001.png",
+    "./images/gte/image_002.png",
+    "./images/gte/image_003.png",
+    "./images/gte/image_004.png",
+    "./images/gte/image_005.png",
+    "./images/gte/image_006.png",
+    "./images/gte/image_007.png",
+    "./images/gte/image_008.png",
+    "./images/gte/image_009.png",
+    "./images/gte/image_010.png",
+    "./images/gte/image_011.png",
+    "./images/gte/image_012.png",
+    "./images/gte/image_013.png",
+    "./images/gte/image_014.png",
+    "./images/gte/image_015.png",
+    "./images/gte/image_016.png",
+    "./images/gte/image_017.png",
+    "./images/gte/image_018.png",
+    "./images/gte/image_019.png",
+    "./images/gte/image_020.png",
+    "./images/gte/image_021.png",
+    "./images/gte/image_022.png",
+    "./images/gte/image_023.png",
+    "./images/gte/image_024.png",
+    "./images/gte/image_025.png",
+    "./images/gte/image_026.png",
+    "./images/gte/image_027.png",
+    "./images/gte/image_028.png",
+    "./images/gte/image_029.png",
+    "./images/gte/image_030.png",
+    "./images/gte/image_031.png",
+    "./images/gte/image_032.png",
+    "./images/gte/image_033.png",
+    "./images/gte/image_034.png",
+    "./images/gte/image_035.png",
+    "./images/gte/image_036.png",
+    "./images/gte/image_037.png",
+    "./images/gte/image_038.png",
+    "./images/her/image_001.png",
+    "./images/her/image_002.png",
+    "./images/her/image_003.png",
+    "./images/her/image_004.png",
+    "./images/her/image_005.png",
+    "./images/her/image_006.png",
+    "./images/her/image_007.png",
+    "./images/her/image_008.png",
+    "./images/her/image_009.png",
+    "./images/her/image_010.png",
+    "./images/her/image_011.png",
+    "./images/her/image_012.png",
+    "./images/her/image_013.png",
+    "./images/her/image_014.png",
+    "./images/her/image_015.png",
+    "./images/her/image_016.png",
+    "./images/her/image_017.png",
+    "./images/her/image_018.png",
+    "./images/her/image_019.png",
+    "./images/her/image_020.png",
+    "./images/her/image_021.png",
+    "./images/her/image_022.png",
+    "./images/her/image_023.png",
+    "./images/her/image_024.png",
+    "./images/her/image_025.png",
+    "./images/her/image_026.png",
+    "./images/her/image_027.png",
+    "./images/her/image_028.png",
+    "./images/her/image_029.png",
+    "./images/her/image_030.png",
+    "./images/her/image_031.png",
+    "./images/her/image_032.png",
+    "./images/her/image_033.png",
+    "./images/her/image_034.png",
+    "./images/her/image_035.png",
+    "./images/her/image_036.png",
+    "./images/her/image_037.png",
+    "./images/her/image_038.png",
+    "./images/her/image_039.png",
+    "./images/her/image_040.png",
+    "./images/her/image_041.png",
+    "./images/her/image_042.png",
+    "./images/her/image_043.png",
+    "./images/her/image_044.png",
+    "./images/her/image_045.png",
+    "./images/her/image_046.png",
+    "./images/her/image_047.png",
+    "./images/her/image_048.png",
+    "./images/her/image_049.png",
+    "./images/her/image_050.png",
+    "./images/org/image_001.png",
+    "./images/org/image_002.png",
+    "./images/org/image_003.png",
+    "./images/org/image_004.png",
+    "./images/org/image_005.png",
+    "./images/org/image_006.png",
+    "./images/org/image_007.png",
+    "./images/org/image_008.png",
+    "./images/org/image_009.png",
+    "./images/org/image_010.png",
+    "./images/org/image_011.png",
+    "./images/org/image_012.png",
+    "./images/org/image_013.png",
+    "./images/plg/image_001.png",
+    "./images/plg/image_002.png",
+    "./images/plg/image_003.png",
+    "./images/plg/image_004.png",
+    "./images/plg/image_005.png",
+    "./images/plg/image_006.png",
+    "./images/plg/image_007.png",
+    "./images/plg/image_008.png",
+    "./images/plg/image_009.png",
+    "./images/plg/image_010.png",
+    "./images/plg/image_011.png",
+    "./images/plg/image_012.png",
+    "./images/plg/image_013.png",
+    "./images/red/image_001.png",
+    "./images/red/image_002.png",
+    "./images/red/image_003.png",
+    "./images/red/image_004.png",
+    "./images/red/image_005.png",
+    "./images/red/image_006.png",
+    "./images/red/image_007.png",
+    "./images/red/image_008.png",
+    "./images/red/image_009.png",
+    "./images/red/image_010.png",
+    "./images/red/image_011.png",
+    "./images/red/image_012.png",
+    "./images/red/image_013.png",
+    "./images/red/image_014.png",
+    "./images/red/image_015.png",
+    "./images/red/image_016.png",
+    "./images/red/image_017.png",
+    "./images/red/image_018.png",
+    "./images/red/image_019.png",
+    "./images/red/image_020.png",
+    "./images/red/image_021.png",
+    "./images/red/image_022.png",
+    "./images/red/image_023.png",
+    "./images/red/image_024.png",
+    "./images/red/image_025.png",
+    "./images/red/image_026.png"];
+
+// Install: pre-cache core resources only (images are cached lazily in background)
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(CORE_ASSETS);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(CORE_ASSETS))
   );
   self.skipWaiting();
 });
 
-// Activate: purge ALL old caches and take control of clients
+// Activate: purge old caches, claim clients
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys
-          .filter((k) => k !== CACHE_NAME)
-          .map((k) => caches.delete(k))
-      );
-    }).then(() => self.clients.claim())
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+    ).then(() => self.clients.claim())
   );
 });
 
-// Fetch: network-first for images (always get latest), cache-first for others
+// Background image pre-caching (batched)
+let precacheActive = false;
+async function precacheImages() {
+  if (precacheActive) return;
+  precacheActive = true;
+  const cache = await caches.open(CACHE_NAME);
+  const clients = await self.clients.matchAll();
+  const post = (msg) => clients.forEach(c => c.postMessage(msg));
+
+  let done = 0, skipped = 0, failed = 0;
+  const total = IMAGE_CACHE.length;
+  const BATCH = 5;
+
+  for (let i = 0; i < IMAGE_CACHE.length; i += BATCH) {
+    const batch = IMAGE_CACHE.slice(i, i + BATCH);
+    const results = await Promise.allSettled(
+      batch.map(async (url) => {
+        const cached = await cache.match(url);
+        if (cached) { skipped++; done++; return; }
+        const resp = await fetch(url, { cache: 'no-cache' });
+        if (resp.ok) { await cache.put(url, resp); }
+        else { failed++; }
+        done++;
+      })
+    );
+    post({ type: 'precache-progress', done, total, skipped, failed });
+    if (i + BATCH < IMAGE_CACHE.length) {
+      await new Promise(r => setTimeout(r, 200));
+    }
+  }
+  post({ type: 'precache-done', total, cached: done - failed, failed });
+  precacheActive = false;
+}
+
+// Message handler: page triggers pre-caching
+self.addEventListener('message', (event) => {
+  if (event.data === 'precache-start') precacheImages();
+});
+
+// Fetch: navigate → network-first, images → cache-first, others → cache-first
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-
   const url = new URL(event.request.url);
   if (url.origin !== location.origin) return;
 
-  // Navigate: network-first, cache fallback
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, clone);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          return caches.match(event.request).then((cached) => {
-            return cached || caches.match('./index.html');
-          });
-        })
+      fetch(event.request).then((response) => {
+        if (response && response.status === 200) {
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, response.clone()));
+        }
+        return response;
+      }).catch(() => caches.match(event.request).then((c) => c || caches.match('./index.html')))
     );
     return;
   }
 
-  // Images: stale-while-revalidate — serve cache instantly, update in background
   if (url.pathname.match(/\.(png|jpg|jpeg|gif|svg|webp|ico)$/i)) {
     event.respondWith(
-      caches.match(event.request).then((cached) => {
-        const fetchPromise = fetch(event.request).then((response) => {
-          if (response && response.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, response.clone());
-            });
-          }
-          return response;
-        });
-        return cached || fetchPromise;
-      })
+      caches.match(event.request).then((cached) => cached || fetch(event.request).then((response) => {
+        if (response && response.status === 200) {
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, response.clone()));
+        }
+        return response;
+      }))
     );
     return;
   }
 
-  // Other assets: cache-first
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-
-      return fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, clone);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          return caches.match(event.request);
-        });
-    })
+    caches.match(event.request).then((cached) => cached || fetch(event.request).then((response) => {
+      if (response && response.status === 200) {
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, response.clone()));
+      }
+      return response;
+    }).catch(() => caches.match(event.request)))
   );
 });
