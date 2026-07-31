@@ -4,7 +4,7 @@
 
 'use strict';
 
-const APP_VERSION = 'v30';
+const APP_VERSION = 'v31';
 
 // ════════════════════════════════════════════════════════
 //  1. Utility Functions
@@ -1036,6 +1036,23 @@ window.addEventListener('auth:ready', () => {
   Storage.setStudent(Auth.currentStudent);
   PWA.init();
   Router.init();
+
+  // Trigger background image pre-caching
+  if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage('precache-start');
+  }
+
+  // Listen for pre-cache progress from SW
+  navigator.serviceWorker?.addEventListener('message', (event) => {
+    if (event.data?.type === 'precache-progress') {
+      const { done, total } = event.data;
+      const pct = Math.round((done / total) * 100);
+      console.log(`[PWA] Caching images: ${done}/${total} (${pct}%)`);
+    }
+    if (event.data?.type === 'precache-done') {
+      console.log(`[PWA] Offline ready: ${event.data.cached} images cached`);
+    }
+  });
 
   const logoutBtn = document.getElementById('btn-logout');
   if (logoutBtn) {
