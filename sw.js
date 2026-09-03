@@ -1,18 +1,19 @@
-// Service Worker — ESAT PWA v31 — Offline-ready with background image pre-cache
-const CACHE_NAME = 'esat-pwa-v31';
+// Service Worker — ESAT PWA v36 — Offline-ready with background image pre-cache
+const CACHE_NAME = 'esat-pwa-v36';
 const CORE_ASSETS = [
   './',
   './index.html',
   './admin.html',
-  './style.css?v=31',
-  './questions.enc.js?v=31',
-  './auth.js?v=31',
-  './app.js?v=31',
+  './license.js?v=36',
+  './style.css?v=36',
+  './questions.enc.js?v=36',
+  './auth.js?v=36',
+  './app.js?v=36',
   './manifest.json',
   './icon.svg',
 ];
 
-// All 453 question images — pre-cached in background after login
+// All 476 question images — pre-cached in background after login
 const IMAGE_CACHE = [
     "./images/ace/image_001.png",
     "./images/ace/image_002.png",
@@ -415,6 +416,29 @@ const IMAGE_CACHE = [
     "./images/her/image_048.png",
     "./images/her/image_049.png",
     "./images/her/image_050.png",
+  "./images/mam/image_001.png",
+  "./images/mam/image_002.png",
+  "./images/mam/image_003.png",
+  "./images/mam/image_004.png",
+  "./images/mam/image_005.png",
+  "./images/mam/image_006.png",
+  "./images/mam/image_007.png",
+  "./images/mam/image_008.png",
+  "./images/mam/image_009.png",
+  "./images/mam/image_010.png",
+  "./images/mam/image_011.png",
+  "./images/mam/image_012.png",
+  "./images/mam/image_013.png",
+  "./images/mam/image_014.png",
+  "./images/mam/image_015.png",
+  "./images/mam/image_016.png",
+  "./images/mam/image_017.png",
+  "./images/mam/image_018.png",
+  "./images/mam/image_019.png",
+  "./images/mam/image_020.png",
+  "./images/mam/image_021.png",
+  "./images/mam/image_022.png",
+  "./images/mam/image_023.png",
     "./images/org/image_001.png",
     "./images/org/image_002.png",
     "./images/org/image_003.png",
@@ -466,7 +490,9 @@ const IMAGE_CACHE = [
     "./images/red/image_023.png",
     "./images/red/image_024.png",
     "./images/red/image_025.png",
-    "./images/red/image_026.png"];
+    "./images/red/image_026.png"
+];
+
 
 // Install: pre-cache core resources only (images are cached lazily in background)
 self.addEventListener('install', (event) => {

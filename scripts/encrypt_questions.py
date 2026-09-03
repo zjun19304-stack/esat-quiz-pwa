@@ -44,7 +44,10 @@ def encrypt_data(plaintext, password):
 
 def extract_via_node(js_path):
     """Use Node.js to safely extract TOPICS and QUESTIONS as JSON"""
-    node_path = r'C:\Users\Admin\.workbuddy\binaries\node\versions\22.22.2\node.exe'
+    # 优先用受管 node（版本号目录可变），回退到 PATH 里的 node
+    import glob
+    cands = sorted(glob.glob(r'C:\Users\Admin\.workbuddy\binaries\node\versions\*\node.exe'))
+    node_path = cands[-1] if cands else 'node'
     with open(js_path, 'r', encoding='utf-8') as f:
         js_code = f.read()
     js_code = js_code.replace('const TOPICS', 'var TOPICS')

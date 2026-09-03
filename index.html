@@ -41,6 +41,19 @@
     </div>
   </div>
 
+  <!-- Activation Screen (offline license code) -->
+  <div id="activate-screen" class="login-screen">
+    <div class="login-card">
+      <div class="login-icon">&#x1F511;</div>
+      <h1 class="login-title">ESAT Practice</h1>
+      <p class="login-subtitle">输入激活码以解锁题库</p>
+      <input type="text" id="activate-code" class="login-input" placeholder="激活码" autocomplete="off" spellcheck="false">
+      <p class="login-error" id="activate-error"></p>
+      <button class="login-btn" id="activate-btn">激活</button>
+      <p class="login-hint">激活码由卖家提供 · <a href="#" id="activate-login-link" style="color:inherit;text-decoration:underline;">已有账号？登录</a></p>
+    </div>
+  </div>
+
   <div id="app" style="display:none;">
 
     <!-- Home View -->
@@ -230,8 +243,9 @@
     <button class="btn-text" id="btn-dismiss">&#10005;</button>
   </div>
 
-  <script src="questions.enc.js?v=31"></script>
-  <script src="auth.js?v=31"></script>
-  <script src="app.js?v=31"></script>
+  <script src="questions.enc.js?v=36"></script>
+  <script src="license.js?v=36"></script>
+  <script src="auth.js?v=36"></script>
+  <script src="app.js?v=36"></script>
 </body>
 </html>

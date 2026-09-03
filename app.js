@@ -4,7 +4,7 @@
 
 'use strict';
 
-const APP_VERSION = 'v31';
+const APP_VERSION = 'v36';
 
 // ════════════════════════════════════════════════════════
 //  1. Utility Functions
@@ -983,7 +983,7 @@ const PWA = {
 
   init() {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=8').catch(err => {
+      navigator.serviceWorker.register('sw.js?v=32').catch(err => {
         console.log('SW registration failed:', err);
       });
     }

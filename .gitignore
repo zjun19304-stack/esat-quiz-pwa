@@ -5,3 +5,30 @@ node_modules/
 
 # Original question bank file - DO NOT upload to GitHub!
 questions.js
+questions.js.bak
+questions.js.bak*
+questions.enc.js.bak
+questions.enc.js.bak*
+
+# Raw question sources in plain text - DO NOT upload (leaks the whole bank)
+scripts/*.txt
+
+# Dev / debug artifacts
+_test-enc.js
+license-public.js
+_dump.json
+_dump*.json
+/_*.json
+questions.enc.js.bak2
+*.bak
+scripts/_*
+
+# Seller secrets - DO NOT upload
+scripts/.sell_key
+scripts/license-private.pem
+scripts/codes_ledger.csv
+scripts/last_code.txt
+
+# Build artifacts
+esat-quiz-pwa-dist.zip
+.dist_tmp/

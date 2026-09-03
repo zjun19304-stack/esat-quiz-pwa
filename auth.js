@@ -23,11 +23,27 @@ const Auth = {
       return;
     }
 
+    // 1. Already activated via license code?
+    if (window.License && License.isActivated()) {
+      const key = License.getKey();   // from the signed activation payload
+      this.tryDecrypt(key).then(success => {
+        if (success) {
+          this.saveSession(key);
+          this.unlockApp();
+        } else {
+          License.clear();
+          this.showActivate();
+        }
+      });
+      return;
+    }
+
+    // 2. Existing session (student/password login)?
     const session = this.getSession();
     if (session) {
       if (Date.now() - session.time > this.SESSION_MAX_AGE) {
         this.clearSession();
-        this.showLogin();
+        this.showActivate();
         return;
       }
       this.tryDecrypt(session.password).then(success => {
@@ -35,15 +51,18 @@ const Auth = {
           this.unlockApp();
         } else {
           this.clearSession();
-          this.showLogin();
+          this.showActivate();
         }
       });
-    } else {
-      this.showLogin();
+      return;
     }
+
+    // 3. Not activated -> show activation screen
+    this.showActivate();
   },
 
   showLogin() {
+    this.hideActivate();
     const loginScreen = document.getElementById('login-screen');
     if (loginScreen) {
       loginScreen.classList.add('active');
@@ -68,6 +87,87 @@ const Auth = {
   hideLogin() {
     const loginScreen = document.getElementById('login-screen');
     if (loginScreen) loginScreen.classList.remove('active');
+  },
+
+  // ════════════════════════════════════════════════════════
+  //  Activation screen (offline license code)
+  // ════════════════════════════════════════════════════════
+
+  showActivate() {
+    const actScreen = document.getElementById('activate-screen');
+    if (actScreen) {
+      actScreen.classList.add('active');
+      const input = document.getElementById('activate-code');
+      if (input) {
+        input.focus();
+        const newInput = input.cloneNode(true);
+        input.parentNode.replaceChild(newInput, input);
+        newInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') this.handleActivate();
+        });
+      }
+      const btn = document.getElementById('activate-btn');
+      if (btn) {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        newBtn.addEventListener('click', () => this.handleActivate());
+      }
+      const link = document.getElementById('activate-login-link');
+      if (link) {
+        const newLink = link.cloneNode(true);
+        link.parentNode.replaceChild(newLink, link);
+        newLink.addEventListener('click', () => {
+          this.hideActivate();
+          this.showLogin();
+        });
+      }
+    }
+  },
+
+  hideActivate() {
+    const actScreen = document.getElementById('activate-screen');
+    if (actScreen) actScreen.classList.remove('active');
+  },
+
+  async handleActivate() {
+    const input = document.getElementById('activate-code');
+    const errorEl = document.getElementById('activate-error');
+    const btn = document.getElementById('activate-btn');
+    if (!input) return;
+
+    const code = input.value.trim();
+    if (!code) {
+      if (errorEl) errorEl.textContent = '请输入激活码';
+      return;
+    }
+    if (btn) { btn.disabled = true; btn.textContent = '验证中...'; }
+    if (errorEl) errorEl.textContent = '';
+
+    try {
+      const res = await License.activate(code);
+      if (res.valid) {
+        const key = License.getKey();   // from the signed activation payload
+        const ok = key ? await this.tryDecrypt(key) : false;
+        if (ok) {
+          this.saveSession(key);
+          this.hideActivate();
+          this.unlockApp();
+          this.setupAntiCopy();
+          localStorage.removeItem('esat_lock_until');
+          localStorage.removeItem('esat_attempts');
+          sessionStorage.removeItem('esat_attempts');
+          return;
+        } else {
+          if (errorEl) errorEl.textContent = '激活成功，但题库解密失败，请联系卖家。';
+        }
+      } else {
+        if (errorEl) errorEl.textContent = res.error || '激活码无效';
+      }
+    } catch (e) {
+      if (errorEl) errorEl.textContent = '激活过程出错，请重试。';
+    }
+
+    if (btn) { btn.disabled = false; btn.textContent = '激活'; }
   },
 
   /**
