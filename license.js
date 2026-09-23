@@ -22,18 +22,71 @@ const License = {
 
   // ── base64url helpers ──
   /**
+   * Remove everything that cannot legally appear in an activation code.
+   *
+   * Buyers copy codes out of WeChat / QQ / console windows / web pages, and
+   * those copy paths frequently inject characters you cannot see:
+   *   - U+200B zero-width space, U+FEFF BOM, U+00AD soft hyphen, bidi marks
+   *   - full-width look-alikes produced by a Chinese IME (- _ . )
+   * Any of them splits the code in half and makes base64 decoding fail,
+   * so they are stripped before we try to locate the payload.
+   */
+  sanitize(input) {
+    let s = String(input == null ? '' : input);
+    s = s.replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF\u00AD]/g, '');
+    s = s.replace(/[\uFF0D\u2010-\u2015\u2212\u30FC]/g, '-');
+    s = s.replace(/\uFF3F/g, '_');
+    s = s.replace(/[\uFF0E\u3002\uFF61]/g, '.');
+    s = s.replace(/[^A-Za-z0-9._-]/g, '');
+    return s;
+  },
+
+  /** True when `str` base64url-decodes into a JSON object. */
+  isJsonB64(str) {
+    if (!str || str.length % 4 === 1) return false;
+    try {
+      const o = JSON.parse(this.b64urlDecode(str));
+      return !!o && typeof o === 'object' && !Array.isArray(o);
+    } catch (e) { return false; }
+  },
+
+  /**
    * Pull the "payload.signature" token out of whatever the user pasted.
-   * Buyers often copy the code together with console banners
-   * ("=== ESAT Activation Code ==="), chat-app decorations, or line breaks.
-   * Those stray characters would break base64 decoding, so find the longest
-   * base64url-ish token pair and use only that.
+   *
+   * The payload is base64url of a JSON object, so it ALWAYS begins with
+   * "eyJ" — we anchor on that instead of a loose "long token dot long token"
+   * regex, which used to swallow stray words (e.g. a trailing "ESAT") into
+   * the payload and corrupt it.
+   *
+   * The signature is a 64-byte P1363 r||s pair, which is always exactly
+   * 86 base64url characters, so we trim to that length; trailing junk is
+   * discarded and a truncated signature is later reported as incomplete.
    */
   extractToken(input) {
-    const raw = String(input == null ? '' : input);
-    const squeezed = raw.replace(/\s+/g, '');
-    const m = squeezed.match(/[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}/);
-    if (m) return m[0];
-    return raw.trim();
+    const SIG_LEN = 86;
+    const s = this.sanitize(input);
+    if (!s) return '';
+
+    // Fast path: a clean payload.signature is already present.
+    const fast = s.match(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{8,}/);
+    if (fast) {
+      const cut = fast[0].indexOf('.');
+      const p = fast[0].slice(0, cut);
+      const sig = fast[0].slice(cut + 1);
+      if (this.isJsonB64(p)) return p + '.' + sig.slice(0, SIG_LEN);
+    }
+
+    // Slow path: junk may still sit inside the payload. Walk every "eyJ"
+    // start and every '.' after it until the head decodes to JSON.
+    for (let st = s.indexOf('eyJ'); st !== -1; st = s.indexOf('eyJ', st + 1)) {
+      for (let dot = s.indexOf('.', st); dot !== -1; dot = s.indexOf('.', dot + 1)) {
+        const p = s.slice(st, dot);
+        const sig = s.slice(dot + 1);
+        if (p.length < 40 || sig.length < 8) continue;
+        if (this.isJsonB64(p)) return p + '.' + sig.slice(0, SIG_LEN);
+      }
+    }
+    return s;
   },
 
   b64urlDecode(str) {
@@ -88,17 +141,30 @@ const License = {
     if (!window.crypto || !window.crypto.subtle) {
       return { valid: false, error: '当前环境不支持加密验证，请通过本地服务器（localhost）打开，不要直接双击文件。' };
     }
+    const SIG_LEN = 86; // 64-byte ECDSA P-256 (r||s) in base64url
     const parts = this.extractToken(code).split('.');
     if (parts.length !== 2) {
-      return { valid: false, error: '激活码格式错误' };
+      return { valid: false, error: '激活码格式错误：请重新完整复制一次，不要手动输入' };
     }
     const [payloadB64, sigB64] = parts;
+    if (sigB64.length < SIG_LEN) {
+      return {
+        valid: false,
+        error: '激活码不完整（少 ' + (SIG_LEN - sigB64.length) + ' 个字符），请重新复制完整的一串'
+      };
+    }
 
     let payload;
     try {
       payload = JSON.parse(this.b64urlDecode(payloadB64));
     } catch (e) {
-      return { valid: false, error: '激活码无法解析' };
+      // A half-copied payload decodes to broken JSON; say so plainly.
+      let head = '';
+      try { head = this.b64urlDecode(payloadB64.slice(0, 40)); } catch (e2) { head = ''; }
+      if (head.indexOf('{"') === 0) {
+        return { valid: false, error: '激活码不完整，请重新复制完整的一串' };
+      }
+      return { valid: false, error: '激活码无法解析，请重新完整复制一次' };
     }
 
     try {
