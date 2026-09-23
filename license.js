@@ -41,13 +41,25 @@ const License = {
     return s;
   },
 
-  /** True when `str` base64url-decodes into a JSON object. */
-  isJsonB64(str) {
-    if (!str || str.length % 4 === 1) return false;
+  /**
+   * Parse a base64url segment into an activation payload (null when it is
+   * not decodable, or decodes to something that is not a payload).
+   */
+  parsePayload(str) {
+    if (!str || str.length % 4 === 1) return null;
     try {
       const o = JSON.parse(this.b64urlDecode(str));
-      return !!o && typeof o === 'object' && !Array.isArray(o);
-    } catch (e) { return false; }
+      if (!o || typeof o !== 'object' || Array.isArray(o)) return null;
+      // Require an activation-shaped object so that random noise which merely
+      // happens to be valid JSON never gets mistaken for a payload.
+      if (typeof o.k !== 'string' && typeof o.exp !== 'number') return null;
+      return o;
+    } catch (e) { return null; }
+  },
+
+  /** True when `str` base64url-decodes into an activation payload. */
+  isJsonB64(str) {
+    return !!this.parsePayload(str);
   },
 
   /**
@@ -120,6 +132,70 @@ const License = {
     return buf.buffer;
   },
 
+  /** Import (once) the seller's public key used for verification. */
+  cryptoKey() {
+    if (!this._pubKey) {
+      this._pubKey = crypto.subtle.importKey(
+        'spki', this.pemToBuf(this.PUBKEY),
+        { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+    }
+    return this._pubKey;
+  },
+
+  /** True when `sigB64` is a genuine signature over the exact string `payloadB64`. */
+  async verifySig(payloadB64, sigB64) {
+    try {
+      const pubKey = await this.cryptoKey();
+      return await crypto.subtle.verify(
+        { name: 'ECDSA', hash: 'SHA-256' }, pubKey,
+        this.b64urlToBytes(sigB64.slice(0, 86)), this.strToBytes(payloadB64));
+    } catch (e) { return false; }
+  },
+
+  /**
+   * Recover a payload that lost, gained or swapped a single character while
+   * being copied (a hyphen injected at a line break, a character skipped by
+   * the drag selection, a doubled keystroke...).
+   *
+   * Every candidate must both decode to a plausible payload AND carry a
+   * valid signature over that exact string, so this can only ever restore a
+   * code the seller really issued — it can never manufacture a valid one.
+   *
+   * Returns the repaired base64url payload, or null.
+   */
+  async repairPayload(payloadB64, sigB64) {
+    if (payloadB64.length < 40 || payloadB64.length > 600) return null;
+    const ok = async (cand) =>
+      (this.parsePayload(cand) && await this.verifySig(cand, sigB64)) ? cand : null;
+
+    // 1) one character too many
+    for (let i = 0; i < payloadB64.length; i++) {
+      const r = await ok(payloadB64.slice(0, i) + payloadB64.slice(i + 1));
+      if (r) return r;
+    }
+    // 2) two adjacent characters swapped
+    for (let i = 0; i + 1 < payloadB64.length; i++) {
+      const r = await ok(payloadB64.slice(0, i) + payloadB64[i + 1] + payloadB64[i] + payloadB64.slice(i + 2));
+      if (r) return r;
+    }
+    // 3) one character lost   /   4) one character mistyped
+    const B = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+    for (let i = 0; i <= payloadB64.length; i++) {
+      for (let j = 0; j < B.length; j++) {
+        const r = await ok(payloadB64.slice(0, i) + B[j] + payloadB64.slice(i));
+        if (r) return r;
+      }
+    }
+    for (let i = 0; i < payloadB64.length; i++) {
+      for (let j = 0; j < B.length; j++) {
+        if (B[j] === payloadB64[i]) continue;
+        const r = await ok(payloadB64.slice(0, i) + B[j] + payloadB64.slice(i + 1));
+        if (r) return r;
+      }
+    }
+    return null;
+  },
+
   getDeviceId() {
     let id = localStorage.getItem(ESAT_DEVICE_LS);
     if (!id) {
@@ -154,32 +230,30 @@ const License = {
       };
     }
 
-    let payload;
-    try {
-      payload = JSON.parse(this.b64urlDecode(payloadB64));
-    } catch (e) {
-      // A half-copied payload decodes to broken JSON; say so plainly.
+    let usedB64 = payloadB64;
+    let payload = this.parsePayload(payloadB64);
+    if (!payload) {
+      // Copying a code out of a chat window or a console regularly drops or
+      // duplicates exactly one character. Try to restore the original, but
+      // only accept it when the seller's signature validates over the repair.
+      const repaired = await this.repairPayload(payloadB64, sigB64);
+      if (repaired) {
+        usedB64 = repaired;
+        payload = this.parsePayload(repaired);
+      }
+    }
+    if (!payload) {
+      // The payload head decoded to readable JSON, so the tail was cut off.
       let head = '';
       try { head = this.b64urlDecode(payloadB64.slice(0, 40)); } catch (e2) { head = ''; }
       if (head.indexOf('{"') === 0) {
-        return { valid: false, error: '激活码不完整，请重新复制完整的一串' };
+        return { valid: false, error: '激活码中间少了字符，请重新完整复制一次（长按消息选「复制」，不要拖选）' };
       }
       return { valid: false, error: '激活码无法解析，请重新完整复制一次' };
     }
 
-    try {
-      const pubKey = await crypto.subtle.importKey(
-        'spki', this.pemToBuf(this.PUBKEY),
-        { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']
-      );
-      const sig = this.b64urlToBytes(sigB64);
-      const data = this.strToBytes(payloadB64);
-      const ok = await crypto.subtle.verify(
-        { name: 'ECDSA', hash: 'SHA-256' }, pubKey, sig, data
-      );
-      if (!ok) return { valid: false, error: '激活码无效或已被篡改' };
-    } catch (e) {
-      return { valid: false, error: '激活码校验失败' };
+    if (!(await this.verifySig(usedB64, sigB64))) {
+      return { valid: false, error: '激活码无效或已被篡改' };
     }
 
     if (payload.exp && Date.now() > payload.exp) {
