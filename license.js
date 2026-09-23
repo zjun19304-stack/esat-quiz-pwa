@@ -21,6 +21,21 @@ const License = {
   PUBKEY: ESAT_LICENSE_PUBKEY,
 
   // ── base64url helpers ──
+  /**
+   * Pull the "payload.signature" token out of whatever the user pasted.
+   * Buyers often copy the code together with console banners
+   * ("=== ESAT Activation Code ==="), chat-app decorations, or line breaks.
+   * Those stray characters would break base64 decoding, so find the longest
+   * base64url-ish token pair and use only that.
+   */
+  extractToken(input) {
+    const raw = String(input == null ? '' : input);
+    const squeezed = raw.replace(/\s+/g, '');
+    const m = squeezed.match(/[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}/);
+    if (m) return m[0];
+    return raw.trim();
+  },
+
   b64urlDecode(str) {
     str = str.replace(/-/g, '+').replace(/_/g, '/');
     while (str.length % 4) str += '=';
@@ -73,7 +88,7 @@ const License = {
     if (!window.crypto || !window.crypto.subtle) {
       return { valid: false, error: '当前环境不支持加密验证，请通过本地服务器（localhost）打开，不要直接双击文件。' };
     }
-    const parts = code.trim().split('.');
+    const parts = this.extractToken(code).split('.');
     if (parts.length !== 2) {
       return { valid: false, error: '激活码格式错误' };
     }
