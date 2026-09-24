@@ -90,13 +90,24 @@ const derSig = crypto.createSign('SHA256').update(payloadB64).sign(priv);
 const sig = derToP1363(derSig).toString('base64url');
 const code = payloadB64 + '.' + sig;
 
+// One-click activation link: the buyer TAPS it instead of copying the long code.
+// A hyperlink cannot lose characters the way a drag-selection can, so this is
+// the recommended delivery for anyone who keeps hitting "激活码不完整".
+const SITE = 'https://zjun19304-stack.github.io/esat-quiz-pwa/';
+const link = SITE + '?c=' + code;
+
 console.log('\n=== ESAT Activation Code ===');
 console.log(code);
 console.log('===========================');
 console.log(`Tier : ${tier}`);
 console.log(`Valid: ${days} days (until ${new Date(payload.exp).toISOString().slice(0, 10)})`);
 console.log('');
+console.log('--- One-click link (recommended: TAP, do not copy) ---');
+console.log(link);
+console.log('   -> saved to scripts/activation_link.txt');
+console.log('');
 fs.writeFileSync(path.join(__dirname, 'last_code.txt'), code);
+fs.writeFileSync(path.join(__dirname, 'activation_link.txt'), link);
 
 // Append to the seller's private ledger (NEVER ship this file in the zip).
 const csvEsc = (v) => {

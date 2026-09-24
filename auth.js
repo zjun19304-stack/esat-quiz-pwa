@@ -12,6 +12,7 @@ const Auth = {
   LOCK_TIME: 30000,                     // 30s initial lock
   LOCK_MAX_TIME: 5 * 60 * 1000,         // 5min max lock
   currentStudent: '',
+  _urlCodeTried: false,                 // 防止 ?c= 链接码被重复触发
 
   /**
    * Initialize: check if already logged in
@@ -120,6 +121,26 @@ const Auth = {
           this.hideActivate();
           this.showLogin();
         });
+      }
+
+      // ── v40 免复制激活：链接带 ?c=<激活码>，打开即自动填入并激活 ──
+      // 激活码长 250 字符，用鼠标在控制台里拖选极易漏字/串行（实测能把
+      // payload 中间 34 个字符换成别的文本）。链接可以被"点"而不必被
+      // "复制"，从根上消除这一类损坏。
+      if (!this._urlCodeTried) {
+        let urlCode = '';
+        try {
+          const sp = new URLSearchParams(location.search || '');
+          urlCode = (sp.get('c') || sp.get('code') || '').trim();
+        } catch (e) { urlCode = ''; }
+        if (urlCode) {
+          this._urlCodeTried = true;
+          const box = document.getElementById('activate-code');
+          if (box) box.value = urlCode;
+          // 立刻把码从地址栏抹掉：避免留在浏览器历史 / 截图 / 被转发的链接里
+          try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
+          setTimeout(() => this.handleActivate(), 60);
+        }
       }
     }
   },

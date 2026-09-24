@@ -1,14 +1,14 @@
-// Service Worker — ESAT PWA v39 — Offline-ready with background image pre-cache
-const CACHE_NAME = 'esat-pwa-v39';
+// Service Worker — ESAT PWA v40 — Offline-ready with background image pre-cache
+const CACHE_NAME = 'esat-pwa-v40';
 const CORE_ASSETS = [
   './',
   './index.html',
   './admin.html',
-  './license.js?v=39',
-  './style.css?v=39',
-  './questions.enc.js?v=39',
-  './auth.js?v=39',
-  './app.js?v=39',
+  './license.js?v=40',
+  './style.css?v=40',
+  './questions.enc.js?v=40',
+  './auth.js?v=40',
+  './app.js?v=40',
   './manifest.json',
   './icon.svg',
 ];
