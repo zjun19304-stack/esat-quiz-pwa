@@ -217,8 +217,13 @@ const License = {
     if (!window.crypto || !window.crypto.subtle) {
       return { valid: false, error: '当前环境不支持加密验证，请通过本地服务器（localhost）打开，不要直接双击文件。' };
     }
+    // v41: 允许把「整条链接」直接粘进来 —— 自动从 ?c=<码> / #code=<码> 里取出码。
+    // 卖家现在发的是链接（点开即自动激活），但买家也可能把链接粘进输入框。
+    let raw = code.trim();
+    const lm = raw.match(/[?&#](?:c|code)=([A-Za-z0-9._%-]+)/);
+    if (lm) { try { raw = decodeURIComponent(lm[1]); } catch (e) { raw = lm[1]; } }
     const SIG_LEN = 86; // 64-byte ECDSA P-256 (r||s) in base64url
-    const parts = this.extractToken(code).split('.');
+    const parts = this.extractToken(raw).split('.');
     if (parts.length !== 2) {
       return { valid: false, error: '激活码格式错误：请重新完整复制一次，不要手动输入' };
     }
@@ -247,7 +252,10 @@ const License = {
       let head = '';
       try { head = this.b64urlDecode(payloadB64.slice(0, 40)); } catch (e2) { head = ''; }
       if (head.indexOf('{"') === 0) {
-        return { valid: false, error: '激活码中间少了字符，请重新完整复制一次（长按消息选「复制」，不要拖选）' };
+        return {
+          valid: false,
+          error: '激活码中间少了字符（只收到 ' + payloadB64.length + ' 个字符）。请点卖家发的链接，或用二维码扫码激活，不要手动拖选复制'
+        };
       }
       return { valid: false, error: '激活码无法解析，请重新完整复制一次' };
     }

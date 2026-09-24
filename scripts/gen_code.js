@@ -109,6 +109,21 @@ console.log('');
 fs.writeFileSync(path.join(__dirname, 'last_code.txt'), code);
 fs.writeFileSync(path.join(__dirname, 'activation_link.txt'), link);
 
+// QR image of the same link. A QR involves ZERO text copying: the buyer scans
+// it with a phone camera (or WeChat's "识别图中二维码"). It is the most robust
+// delivery channel, so one is produced automatically for every issued code.
+const QR_MODULE = 'C:/Users/Admin/.workbuddy/binaries/node/workspace/node_modules/qrcode';
+let QR = null;
+try { QR = require(QR_MODULE); } catch (e) { QR = null; }
+if (QR) {
+  QR.toFile(path.join(__dirname, 'activation_qr.png'), link,
+            { errorCorrectionLevel: 'M', margin: 2, width: 1000 })
+    .then(() => console.log('   -> QR saved to scripts/activation_qr.png'))
+    .catch((e) => console.log('   -> (QR failed: ' + e.message + ', link still valid)'));
+} else {
+  console.log('   -> (qrcode module missing; npm install qrcode in the managed workspace)');
+}
+
 // Append to the seller's private ledger (NEVER ship this file in the zip).
 const csvEsc = (v) => {
   const s = String(v);

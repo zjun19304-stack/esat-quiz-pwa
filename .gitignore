@@ -28,6 +28,8 @@ scripts/.sell_key
 scripts/license-private.pem
 scripts/codes_ledger.csv
 scripts/last_code.txt
+# 激活二维码 = 激活码的图形编码（内含题库密码），绝不能进仓库
+scripts/activation_qr.png
 
 # Build artifacts
 esat-quiz-pwa-dist.zip
